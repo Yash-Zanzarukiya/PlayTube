@@ -1,18 +1,21 @@
 {
-  "name": "backend",
+  "name": "videotube",
   "version": "1.0.0",
-  "description": "It's First Project",
+  "description": "",
   "main": "index.js",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "nodemon -r dotenv/config --experimental-json-modules src/index.js"
   },
-  "author": "yashpz",
+  "author": "",
   "license": "ISC",
-  "devDependencies": {
+  "dependencies": {
     "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "mongoose": "^8.2.3",
     "nodemon": "^3.1.0"
   },
-  "dependencies": {
+  "devDependencies": {
     "prettier": "^3.2.5"
   }
 }
