@@ -4,6 +4,7 @@ import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { APIResponse } from "../utils/APIResponse.js";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 
 const generateAccessAndRefreshToken = async (_id) => {
   try {
@@ -73,13 +74,12 @@ const registerUser = asyncHandler(async (req, res) => {
   // uploading on cloudinary
 
   let avatarRes = await uploadOnCloudinary(avatarLocalPath);
+  if (!avatarRes)
+    throw new APIError(500, "Internal Server Error!!! Files Unable to Upload");
 
   let coverImageRes = coverImageLocalPath
     ? await uploadOnCloudinary(coverImageLocalPath)
     : "";
-
-  if (!avatarRes)
-    throw new APIError(500, "Internal Server Error!!! Files Unable to Upload");
 
   // Create new user
   const createdUser = await User.create({
@@ -311,15 +311,21 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     throw new APIError(500, "Error Accured While uploading File");
   }
 
+  // TODO: Delete Old File in Cloudinary
+
   const user = await User.findByIdAndUpdate(
     req.user?._id,
     {
-      avatar: avatarImg.url,
+      $set: { avatar: avatarImg.url },
     },
     {
       new: true,
     }
   ).select("-password");
+
+  if (!user) {
+    new APIError(500, "Error while Updating database");
+  }
 
   return res
     .status(200)
@@ -341,16 +347,141 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
   const user = await User.findByIdAndUpdate(
     req.user?._id,
     {
-      coverImage: coverImg.url,
+      $set: { coverImage: coverImg.url },
     },
     {
       new: true,
     }
   ).select("-password");
 
+  if (!user) {
+    new APIError(500, "Error accured while Updating database");
+  }
+
   return res
     .status(200)
     .json(new APIResponse(200, user, "Cover Image updated Successfully"));
+});
+
+const getUserChannelProfile = asyncHandler(async (req, res) => {
+  const { username } = req.param();
+  if (!username) {
+    throw new APIError(400, "no username found");
+  }
+
+  const channalUser = await User.aggregate([
+    {
+      $match: {
+        // this gives channel document
+        username: username?.toLowerCase(),
+      },
+    },
+    {
+      // this gives Subscribers of channel
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "channel",
+        as: "subscribers",
+      },
+    },
+    {
+      // this gives subcriptions of channel
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "subscriber",
+        as: "subscribedTo",
+      },
+    },
+    {
+      $addFields: {
+        subscribersCount: {
+          $size: "$subscribers",
+        },
+        channelsSubscribedToCount: {
+          $size: "$subscribedTo",
+        },
+        isSubscribed: {
+          $cond: {
+            if: { $in: [req.user?._id, "$subscribers.subscriber"] },
+            then: true,
+            else: false,
+          },
+        },
+      },
+    },
+    {
+      $project: {
+        username: 1,
+        fullName: 1,
+        avatar: 1,
+        coverImage: 1,
+        email: 1,
+        subscribersCount: 1,
+        channelsSubscribedToCount: 1,
+        isSubscribed: 1,
+      },
+    },
+  ]);
+
+  if (!channel?.length) {
+    throw new APIError(404, "channel does not exists");
+  }
+
+  return res
+    .status(200)
+    .json(new APIResponse(200, channalUser, "Channal Fetched Successfully"));
+});
+
+const getWatchHistory = asyncHandler(async (req, res) => {
+  const userWatchHistory = await User.aggregate([
+    {
+      $match: {
+        _id: new mongoose.Schema.Types.ObjectId(req.user._id),
+      },
+    },
+    {
+      $lookup: {
+        from: "videos",
+        localField: "watchHistory",
+        foreignField: "_id",
+        as: "watchHistory",
+        pipeline: [
+          {
+            $lookup: {
+              from: "users",
+              localField: "owner",
+              foreignField: "_id",
+              as: "owner",
+              pipeline: [
+                {
+                  $project: {
+                    username: 1,
+                    fullName: 1,
+                    avatar: 1,
+                  },
+                },
+              ],
+            },
+          },
+          {
+            $addFields: {
+              owner: {
+                $first: "$owner",
+              },
+            },
+          },
+        ],
+      },
+    },
+  ]);
+
+  return res
+    .status(200)
+    .json(
+      new APIResponse(200, userWatchHistory, "History Fetched Successfully")
+    );
 });
 
 export {
@@ -363,4 +494,6 @@ export {
   getCurrentUser,
   updateUserAvatar,
   updateUserCoverImage,
+  getUserChannelProfile,
+  getWatchHistory,
 };
