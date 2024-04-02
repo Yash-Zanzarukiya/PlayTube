@@ -117,10 +117,11 @@ const loginUser = asyncHandler(async (req, res) => {
   // send response
 
   // data <- req.body
-  const { email, password, username } = req.body;
+
+  let { email, password, username } = req.body;
 
   // validate
-  if (!(email || username)) {
+  if (!email && !username) {
     throw new APIError(400, "Username or Email is required");
   }
 
@@ -171,8 +172,8 @@ const logoutUser = asyncHandler(async (req, res) => {
   await User.findByIdAndUpdate(
     req.user._id,
     {
-      $set: {
-        refreshToken: undefined,
+      $unset: {
+        refreshToken: 1,
       },
     },
     {
@@ -215,7 +216,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       throw new APIError(401, "Refresh token is expired or used");
     }
 
-    const { accessToken, newRefreshToken } = generateAccessAndRefreshToken(
+    const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
       user._id
     );
 
@@ -227,11 +228,11 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     return res
       .status(200)
       .cookie("accessToken", accessToken, cookieOptions)
-      .cookie("refreshToken", newRefreshToken, cookieOptions)
+      .cookie("refreshToken", refreshToken, cookieOptions)
       .json(
         new APIResponse(
           200,
-          { accessToken, refreshToken: newRefreshToken },
+          { accessToken, newRefreshToken: refreshToken },
           "Access Token Granted Successfully"
         )
       );
@@ -244,7 +245,7 @@ const changePassword = asyncHandler(async (req, res) => {
   const { oldPassword, newPassword } = req.body;
 
   // Caution
-  if (!(oldPassword && newPassword)) {
+  if (!oldPassword || !newPassword) {
     throw new APIError(400, "All Fields Required");
   }
 
@@ -271,6 +272,8 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 
 const updateUserProfile = asyncHandler(async (req, res) => {
   const { fullName, email } = req.body;
+
+  // TODO : Not all fields required
 
   if (!fullName || !email) {
     throw new APIError(400, "All fields are required");
@@ -301,7 +304,8 @@ const updateUserProfile = asyncHandler(async (req, res) => {
 });
 
 const updateUserAvatar = asyncHandler(async (req, res) => {
-  const avatarLocalPath = req.file?.avatar[0]?.path;
+  const avatarLocalPath = req.file?.path;
+
   if (!avatarLocalPath) {
     throw new APIError(400, "File required");
   }
@@ -333,7 +337,7 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
 });
 
 const updateUserCoverImage = asyncHandler(async (req, res) => {
-  const coverImageLocalPath = req.file?.coverImage[0]?.path;
+  const coverImageLocalPath = req.file?.path;
 
   if (!coverImageLocalPath) {
     throw new APIError(400, "File required");
@@ -364,12 +368,12 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
 });
 
 const getUserChannelProfile = asyncHandler(async (req, res) => {
-  const { username } = req.param();
+  const { username } = req.params;
   if (!username) {
     throw new APIError(400, "no username found");
   }
 
-  const channalUser = await User.aggregate([
+  const channelUser = await User.aggregate([
     {
       $match: {
         // this gives channel document
@@ -425,20 +429,21 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
     },
   ]);
 
-  if (!channel?.length) {
+  if (!channelUser?.length) {
     throw new APIError(404, "channel does not exists");
   }
 
   return res
     .status(200)
-    .json(new APIResponse(200, channalUser, "Channal Fetched Successfully"));
+    .json(new APIResponse(200, channelUser, "Channal Fetched Successfully"));
 });
 
 const getWatchHistory = asyncHandler(async (req, res) => {
   const userWatchHistory = await User.aggregate([
     {
       $match: {
-        _id: new mongoose.Schema.Types.ObjectId(req.user._id),
+        _id: new mongoose.Types.ObjectId(req.user._id),
+        // _id: new mongoose.Schema.Types.ObjectId(req.user._id),
       },
     },
     {

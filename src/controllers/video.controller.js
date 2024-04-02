@@ -1,3 +1,5 @@
+import { APIError } from "../utils/APIError.js";
+
 const getAllVideos = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query;
   //TODO: get all videos based on query, sort, pagination
@@ -6,6 +8,13 @@ const getAllVideos = asyncHandler(async (req, res) => {
 const publishAVideo = asyncHandler(async (req, res) => {
   const { title, description } = req.body;
   // TODO: get video, upload to cloudinary, create video
+
+  if (!title) {
+    throw new APIError(400, "Title is Required");
+  }
+
+  
+
 });
 
 const getVideoById = asyncHandler(async (req, res) => {
