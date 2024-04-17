@@ -1,7 +1,8 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { APIError } from "../utils/APIError.js";
 import { User } from "../models/user.model.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { uploadPhotoOnCloudinary as uploadOnCloudinary } from "../utils/cloudinary.js";
+import { v2 as cloudinary } from "cloudinary";
 import { APIResponse } from "../utils/APIResponse.js";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
@@ -273,24 +274,17 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 const updateUserProfile = asyncHandler(async (req, res) => {
   const { fullName, email } = req.body;
 
-  // TODO : Not all fields required
-
-  if (!fullName || !email) {
-    throw new APIError(400, "All fields are required");
+  if (!fullName && !email) {
+    throw new APIError(400, "Atleast one field required");
   }
 
-  const updatedUserData = await User.findByIdAndUpdate(
-    req.user?._id,
-    {
-      $set: {
-        email,
-        fullName,
-      },
-    },
-    {
-      new: true,
-    }
-  ).select("-password");
+  const user = await User.findById(req.user?._id);
+
+  if (fullName) user.fullName = fullName;
+
+  if (email) user.email = email;
+
+  const updatedUserData = await User.save().select("-password -refreshToken");
 
   if (!updatedUserData) {
     new APIError(500, "Error while Updating User Data");
@@ -305,35 +299,50 @@ const updateUserProfile = asyncHandler(async (req, res) => {
 
 const updateUserAvatar = asyncHandler(async (req, res) => {
   const avatarLocalPath = req.file?.path;
+  console.log(req.file);
 
   if (!avatarLocalPath) {
     throw new APIError(400, "File required");
   }
 
   const avatarImg = await uploadOnCloudinary(avatarLocalPath);
+
   if (!avatarImg) {
     throw new APIError(500, "Error Accured While uploading File");
   }
 
-  // TODO: Delete Old File in Cloudinary
+  const user = await User.findById(req.user?._id);
 
-  const user = await User.findByIdAndUpdate(
-    req.user?._id,
-    {
-      $set: { avatar: avatarImg.url },
-    },
-    {
-      new: true,
-    }
-  ).select("-password");
+  // TODO delete cover image from cloudinary
 
-  if (!user) {
-    new APIError(500, "Error while Updating database");
-  }
+  // const oldImageId = user.avatar;
+  // const isDestroyed = await cloudinary.uploader.destroy(oldImageId, {
+  //   resource_type: "image",
+  // });
+  // console.log(oldImageId);
+  // console.log(isDestroyed);
+
+  user.avatar = avatarImg.url;
+
+  const updatedUser = await user.save({ validateBeforeSave: false });
+
+  // const updatedUser = await User.findByIdAndUpdate(
+  //   req.user?._id,
+  //   {
+  //     $set: { avatar: avatarImg.url },
+  //   },
+  //   {
+  //     new: true,
+  //   }
+  // ).select("-password");
+
+  // if (!updatedUser) {
+  //   new APIError(500, "Error while Updating database");
+  // }
 
   return res
     .status(200)
-    .json(new APIResponse(200, user, "avatar updated Successfully"));
+    .json(new APIResponse(200, updatedUser, "avatar updated Successfully"));
 });
 
 const updateUserCoverImage = asyncHandler(async (req, res) => {
@@ -347,6 +356,8 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
   if (!coverImg) {
     throw new APIError(500, "Error Accured While uploading File");
   }
+
+  // TODO delete cover image from cloudinary
 
   const user = await User.findByIdAndUpdate(
     req.user?._id,
