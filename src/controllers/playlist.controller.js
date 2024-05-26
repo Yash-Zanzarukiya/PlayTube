@@ -27,6 +27,8 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
   if (!isValidObjectId(userId))
     throw new APIError(400, "Valid userId required");
 
+  // THINKME : playlist thumbnail
+
   const playlists = await Playlist.aggregate([
     {
       $match: {
@@ -45,6 +47,23 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
               fullName: 1,
               avatar: 1,
               username: 1,
+              views: 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $lookup: {
+        from: "videos",
+        localField: "videos",
+        foreignField: "_id",
+        as: "videos",
+        pipeline: [
+          {
+            $project: {
+              thumbnail: 1,
+              views: 1,
             },
           },
         ],
@@ -58,6 +77,19 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
         name: 1,
         description: 1,
         owner: 1,
+        thumbnail: 1,
+        videosCount: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        thumbnail: {
+          $first: "$videos.thumbnail",
+        },
+        videosCount: {
+          $size: "$videos",
+        },
+        totalViews: {
+          $sum: "$videos.views",
+        },
       },
     },
   ]);
@@ -97,7 +129,9 @@ const getPlaylistById = asyncHandler(async (req, res) => {
               pipeline: [
                 {
                   $project: {
+                    username: 1,
                     fullName: 1,
+                    avatar: 1,
                   },
                 },
               ],
@@ -108,17 +142,6 @@ const getPlaylistById = asyncHandler(async (req, res) => {
               owner: {
                 $first: "$owner",
               },
-            },
-          },
-          {
-            $project: {
-              videoFile: 1,
-              title: 1,
-              description: 1,
-              duration: 1,
-              thumbnail: 1,
-              views: 1,
-              owner: 1,
             },
           },
         ],
@@ -133,7 +156,9 @@ const getPlaylistById = asyncHandler(async (req, res) => {
         pipeline: [
           {
             $project: {
+              username: 1,
               fullName: 1,
+              avatar: 1,
             },
           },
         ],
@@ -149,16 +174,29 @@ const getPlaylistById = asyncHandler(async (req, res) => {
     {
       $project: {
         name: 1,
-        videos: 1,
         description: 1,
+        videos: 1,
         owner: 1,
+        thumbnail: 1,
+        videosCount: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        thumbnail: {
+          $first: "$videos.thumbnail",
+        },
+        videosCount: {
+          $size: "$videos",
+        },
+        totalViews: {
+          $sum: "$videos.views",
+        },
       },
     },
   ]);
 
   return res
     .status(200)
-    .json(new APIResponse(200, playlists, "Playlist sent successfully"));
+    .json(new APIResponse(200, playlists[0], "Playlist sent successfully"));
 });
 
 const addVideoToPlaylist = asyncHandler(async (req, res) => {

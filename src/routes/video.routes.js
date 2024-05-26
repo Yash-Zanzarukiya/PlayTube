@@ -13,14 +13,13 @@ import { verifyJWT } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
-router.use(verifyJWT);
-
 // http://localhost:3000/api/v1/videos/...
 
 router
   .route("/")
   .get(getAllVideos)
   .post(
+    verifyJWT,
     upload.fields([
       {
         name: "videoFile",
@@ -37,10 +36,10 @@ router
 router
   .route("/:videoId")
   .get(getVideoById)
-  .delete(deleteVideo)
-  .patch(upload.single("thumbnail"), updateVideo);
+  .delete(verifyJWT, deleteVideo)
+  .patch(verifyJWT, upload.single("thumbnail"), updateVideo);
 
-router.route("/toggle/publish/:videoId").patch(togglePublishStatus);
-router.route("/view/:videoId").patch(updateView);
+router.route("/toggle/publish/:videoId").patch(verifyJWT, togglePublishStatus);
+router.route("/view/:videoId").patch(verifyJWT, updateView);
 
 export default router;

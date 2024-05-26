@@ -84,7 +84,8 @@ const getChannelStats = asyncHandler(async (req, res) => {
 
   channelStats.totalViews = videoStates[0].totalViews;
   channelStats.totalVideos = videoStates[0].totalVideos;
-  channelStats.totalSubscribers = subscriber[0].totalSubscribers;
+  // FIXME : Not working throwing errors
+  channelStats.totalSubscribers = subscriber && subscriber[0]?.totalSubscribers;
   channelStats.totalLikes = totalLikes[0].likeCount;
 
   // console.log(channelStats);

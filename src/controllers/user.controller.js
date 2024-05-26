@@ -1,8 +1,10 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { APIError } from "../utils/APIError.js";
 import { User } from "../models/user.model.js";
-import { uploadPhotoOnCloudinary as uploadOnCloudinary } from "../utils/cloudinary.js";
-import { v2 as cloudinary } from "cloudinary";
+import {
+  deleteImageOnCloudinary,
+  uploadPhotoOnCloudinary as uploadOnCloudinary,
+} from "../utils/cloudinary.js";
 import { APIResponse } from "../utils/APIResponse.js";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
@@ -122,7 +124,7 @@ const loginUser = asyncHandler(async (req, res) => {
   let { email, password, username } = req.body;
 
   // validate
-  if (!email && !username) {
+  if ((!email && !username) || !password) {
     throw new APIError(400, "Username or Email is required");
   }
 
@@ -136,7 +138,6 @@ const loginUser = asyncHandler(async (req, res) => {
   }
 
   const isCredentialValid = await user.isPasswordCorrect(password);
-
   if (!isCredentialValid) {
     throw new APIError(401, "Credential Invalid");
   }
@@ -164,7 +165,7 @@ const loginUser = asyncHandler(async (req, res) => {
       new APIResponse(
         200,
         { user: loggedInUser, accessToken, refreshToken },
-        "LoggedIn Successfully"
+        "Logged In Successfully"
       )
     );
 });
@@ -242,6 +243,8 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   }
 });
 
+// TODO Remove password from response.... .lean()
+
 const changePassword = asyncHandler(async (req, res) => {
   const { oldPassword, newPassword } = req.body;
 
@@ -249,6 +252,8 @@ const changePassword = asyncHandler(async (req, res) => {
   if (!oldPassword || !newPassword) {
     throw new APIError(400, "All Fields Required");
   }
+
+  console.log(oldPassword, newPassword);
 
   const user = await User.findById(req.user?._id);
   const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
@@ -275,7 +280,7 @@ const updateUserProfile = asyncHandler(async (req, res) => {
   const { fullName, email } = req.body;
 
   if (!fullName && !email) {
-    throw new APIError(400, "Atleast one field required");
+    throw new APIError(400, "At least one field required");
   }
 
   const user = await User.findById(req.user?._id);
@@ -284,11 +289,13 @@ const updateUserProfile = asyncHandler(async (req, res) => {
 
   if (email) user.email = email;
 
-  const updatedUserData = await User.save().select("-password -refreshToken");
+  const updatedUserData = await user.save();
 
   if (!updatedUserData) {
     new APIError(500, "Error while Updating User Data");
   }
+
+  delete updatedUserData.password;
 
   return res
     .status(200)
@@ -299,7 +306,6 @@ const updateUserProfile = asyncHandler(async (req, res) => {
 
 const updateUserAvatar = asyncHandler(async (req, res) => {
   const avatarLocalPath = req.file?.path;
-  console.log(req.file);
 
   if (!avatarLocalPath) {
     throw new APIError(400, "File required");
@@ -311,34 +317,21 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     throw new APIError(500, "Error Accured While uploading File");
   }
 
-  const user = await User.findById(req.user?._id);
+  await deleteImageOnCloudinary(req.user?.avatar);
 
-  // TODO delete cover image from cloudinary
+  const updatedUser = await User.findByIdAndUpdate(
+    req.user?._id,
+    {
+      $set: { avatar: avatarImg.url },
+    },
+    {
+      new: true,
+    }
+  ).select("-password");
 
-  // const oldImageId = user.avatar;
-  // const isDestroyed = await cloudinary.uploader.destroy(oldImageId, {
-  //   resource_type: "image",
-  // });
-  // console.log(oldImageId);
-  // console.log(isDestroyed);
-
-  user.avatar = avatarImg.url;
-
-  const updatedUser = await user.save({ validateBeforeSave: false });
-
-  // const updatedUser = await User.findByIdAndUpdate(
-  //   req.user?._id,
-  //   {
-  //     $set: { avatar: avatarImg.url },
-  //   },
-  //   {
-  //     new: true,
-  //   }
-  // ).select("-password");
-
-  // if (!updatedUser) {
-  //   new APIError(500, "Error while Updating database");
-  // }
+  if (!updatedUser) {
+    new APIError(500, "Error while Updating database");
+  }
 
   return res
     .status(200)
@@ -357,7 +350,7 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     throw new APIError(500, "Error Accured While uploading File");
   }
 
-  // TODO delete cover image from cloudinary
+  await deleteImageOnCloudinary(req.user?.coverImage);
 
   const user = await User.findByIdAndUpdate(
     req.user?._id,
@@ -446,15 +439,15 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new APIResponse(200, channelUser, "Channal Fetched Successfully"));
+    .json(new APIResponse(200, channelUser[0], "Channal Fetched Successfully"));
 });
 
+// FIXME Get Proper WatchHistory
 const getWatchHistory = asyncHandler(async (req, res) => {
   const userWatchHistory = await User.aggregate([
     {
       $match: {
         _id: new mongoose.Types.ObjectId(req.user._id),
-        // _id: new mongoose.Schema.Types.ObjectId(req.user._id),
       },
     },
     {
@@ -491,12 +484,23 @@ const getWatchHistory = asyncHandler(async (req, res) => {
         ],
       },
     },
+    {
+      $project: {
+        watchHistory: 1,
+      },
+    },
   ]);
+
+  let watchHistory = userWatchHistory[0].watchHistory;
 
   return res
     .status(200)
     .json(
-      new APIResponse(200, userWatchHistory, "History Fetched Successfully")
+      new APIResponse(
+        200,
+        watchHistory.reverse(),
+        "History Fetched Successfully"
+      )
     );
 });
 

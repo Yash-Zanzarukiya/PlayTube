@@ -109,7 +109,6 @@ const getSubscribedChannels = asyncHandler(async (req, res) => {
               fullName: 1,
               username: 1,
               avatar: 1,
-              email: 1,
             },
           },
         ],
@@ -119,20 +118,44 @@ const getSubscribedChannels = asyncHandler(async (req, res) => {
       $unwind: "$channel",
     },
     {
+      $lookup: {
+        from: "subscriptions",
+        localField: "channel._id",
+        foreignField: "channel",
+        as: "channelSubscribers",
+        pipeline: [
+          {
+            $project: {
+              subscriber: 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $addFields: {
+        "channel.isSubscribed": {
+          $cond: {
+            if: { $in: [req.user?._id, "$channelSubscribers.subscriber"] },
+            then: true,
+            else: false,
+          },
+        },
+      },
+    },
+    {
       $project: {
         channel: 1,
       },
     },
   ]);
 
-  subscribedChannels.subscribedTOCount = subscribedChannels.length;
-
   return res
     .status(200)
     .json(
       new APIResponse(
         200,
-        {subscribedChannels },
+        subscribedChannels,
         "Subscribed channel list sent successfully"
       )
     );

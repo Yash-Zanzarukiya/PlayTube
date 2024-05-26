@@ -2,6 +2,10 @@ import mongoose, { Schema } from "mongoose";
 
 const likeSchema = new Schema(
   {
+    liked: {
+      type: Boolean,
+      default: true,
+    },
     video: {
       type: Schema.Types.ObjectId,
       ref: "Video",

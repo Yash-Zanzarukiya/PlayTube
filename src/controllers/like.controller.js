@@ -7,10 +7,16 @@ import { Comment } from "../models/comment.model.js";
 import { Tweet } from "../models/tweet.model.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
+// TODO add dislike logic
+
 const toggleVideoLike = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
+  const { toggleLike } = req.query;
 
-  if (!isValidObjectId(videoId)) throw new APIError(400, "invalid videoId");
+
+  if (!isValidObjectId(videoId)) {
+    throw new APIError(400, "invalid videoId");
+  }
 
   const video = await Video.findById(videoId);
   if (!video) throw new APIError(400, "video not found");
@@ -26,9 +32,17 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
     isLiked = true;
   }
 
+  let totalLikes = await Like.find({ video: videoId });
+
   return res
     .status(200)
-    .json(new APIResponse(200, { isLiked }, "like toggled successfully"));
+    .json(
+      new APIResponse(
+        200,
+        { isLiked, totalLikes: totalLikes.length },
+        "like toggled successfully"
+      )
+    );
 });
 
 const toggleCommentLike = asyncHandler(async (req, res) => {
@@ -55,9 +69,17 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
     isLiked = true;
   }
 
+  let totalLikes = await Like.find({ comment: commentId });
+
   return res
     .status(200)
-    .json(new APIResponse(200, { isLiked }, "Comment liked successfully"));
+    .json(
+      new APIResponse(
+        200,
+        { isLiked, totalLikes: totalLikes.length },
+        "Comment like toggled successfully"
+      )
+    );
 });
 
 const toggleTweetLike = asyncHandler(async (req, res) => {
@@ -77,9 +99,18 @@ const toggleTweetLike = asyncHandler(async (req, res) => {
     if (!like) throw new APIError(500, "error while toggling like");
     isLiked = true;
   }
+
+  let totalLikes = await Like.find({ tweet: tweetId });
+
   return res
     .status(200)
-    .json(new APIResponse(200, { isLiked }, "Tweet liked successfully"));
+    .json(
+      new APIResponse(
+        200,
+        { isLiked, totalLikes: totalLikes.length },
+        "Tweet like toggled successfully"
+      )
+    );
 });
 
 const getLikedVideos = asyncHandler(async (req, res) => {

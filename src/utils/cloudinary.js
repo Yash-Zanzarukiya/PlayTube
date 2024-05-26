@@ -48,13 +48,20 @@ const uploadVideoOnCloudinary = async (localFilePath) => {
   }
 };
 
-const deleteImageOnCloudinary = async (ImageId) => {
+const deleteImageOnCloudinary = async (URL) => {
   try {
-    if (!ImageId) return false;
+    if (!URL) return false;
 
-    const cldnry_res = await cloudinary.uploader.destroy(ImageId, {
-      resource_type: "image",
-    });
+    let ImageId = URL.match(
+      /(?:image|video)\/upload\/v\d+\/videotube\/(photos|videos)\/(.+?)\.\w+$/
+    )[2];
+
+    const cldnry_res = await cloudinary.uploader.destroy(
+      `videotube/photos/${ImageId}`,
+      {
+        resource_type: "image",
+      }
+    );
 
     return cldnry_res;
   } catch (error) {
@@ -63,13 +70,20 @@ const deleteImageOnCloudinary = async (ImageId) => {
   }
 };
 
-const deleteVideoOnCloudinary = async (VideoId) => {
+const deleteVideoOnCloudinary = async (URL) => {
   try {
-    if (!VideoId) return false;
+    if (!URL) return false;
 
-    const cldnry_res = await cloudinary.uploader.destroy(VideoId, {
-      resource_type: "video",
-    });
+    let VideoId = URL.match(
+      /(?:image|video)\/upload\/v\d+\/videotube\/(photos|videos)\/(.+?)\.\w+$/
+    )[2];
+
+    const cldnry_res = await cloudinary.uploader.destroy(
+      `videotube/videos/${VideoId}`,
+      {
+        resource_type: "video",
+      }
+    );
 
     return cldnry_res;
   } catch (error) {
