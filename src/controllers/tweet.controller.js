@@ -1,4 +1,5 @@
 import { Tweet } from "../models/tweet.model.js";
+import { Like } from "../models/like.model.js";
 import mongoose, { isValidObjectId } from "mongoose";
 import { APIError } from "../utils/APIError.js";
 import { APIResponse } from "../utils/APIResponse.js";
@@ -13,9 +14,22 @@ const createTweet = asyncHandler(async (req, res) => {
 
   if (!tweetRes) throw new APIError(500, "Error occured while creating tweet");
 
+  let newTweet = {
+    ...tweetRes._doc,
+    owner: {
+      fullName: req.user.fullName,
+      username: req.user.username,
+      avatar: req.user.avatar,
+    },
+    totalDisLikes: 0,
+    totalLikes: 0,
+    isLiked: false,
+    isDisLiked: false,
+  };
+
   return res
     .status(200)
-    .json(new APIResponse(200, tweetRes, "tweet created successfully"));
+    .json(new APIResponse(200, newTweet, "tweet created successfully"));
 });
 
 const getUserTweets = asyncHandler(async (req, res) => {
@@ -28,6 +42,7 @@ const getUserTweets = asyncHandler(async (req, res) => {
         owner: new mongoose.Types.ObjectId(userId),
       },
     },
+    // fetch likes of tweet
     {
       $lookup: {
         from: "likes",
@@ -36,6 +51,7 @@ const getUserTweets = asyncHandler(async (req, res) => {
         as: "likes",
       },
     },
+    // get owner details
     {
       $lookup: {
         from: "users",
@@ -56,6 +72,7 @@ const getUserTweets = asyncHandler(async (req, res) => {
     {
       $unwind: "$owner",
     },
+    //TODO: Optimize this part in all over if possible
     {
       $project: {
         content: 1,
@@ -63,11 +80,73 @@ const getUserTweets = asyncHandler(async (req, res) => {
         updatedAt: 1,
         owner: 1,
         totalLikes: {
-          $size: "$likes",
+          $size: {
+            $filter: {
+              input: "$likes",
+              as: "like",
+              cond: { $eq: ["$$like.liked", true] },
+            },
+          },
+        },
+        totalDisLikes: {
+          $size: {
+            $filter: {
+              input: "$likes",
+              as: "like",
+              cond: { $eq: ["$$like.liked", false] },
+            },
+          },
         },
         isLiked: {
           $cond: {
-            if: { $in: [req.user?._id, "$likes.likedBy"] },
+            if: {
+              $gt: [
+                {
+                  $size: {
+                    $filter: {
+                      input: "$likes",
+                      as: "like",
+                      cond: {
+                        $and: [
+                          {
+                            $eq: ["$$like.likedBy", req.user?._id],
+                          },
+                          {
+                            $eq: ["$$like.liked", true],
+                          },
+                        ],
+                      },
+                    },
+                  },
+                },
+                0,
+              ],
+            },
+            then: true,
+            else: false,
+          },
+        },
+        isDisLiked: {
+          $cond: {
+            if: {
+              $gt: [
+                {
+                  $size: {
+                    $filter: {
+                      input: "$likes",
+                      as: "like",
+                      cond: {
+                        $and: [
+                          { $eq: ["$$like.likedBy", req.user?._id] },
+                          { $eq: ["$$like.liked", false] },
+                        ],
+                      },
+                    },
+                  },
+                },
+                0,
+              ],
+            },
             then: true,
             else: false,
           },
@@ -105,11 +184,16 @@ const updateTweet = asyncHandler(async (req, res) => {
 
 const deleteTweet = asyncHandler(async (req, res) => {
   const { tweetId } = req.params;
+
   if (!isValidObjectId(tweetId)) throw new APIError(400, "Invalid tweetId");
 
   const findRes = await Tweet.findByIdAndDelete(tweetId);
 
   if (!findRes) throw new APIError(500, "tweet not found");
+
+  const deleteLikes = await Like.deleteMany({
+    tweet: new mongoose.Types.ObjectId(tweetId),
+  });
 
   return res
     .status(200)

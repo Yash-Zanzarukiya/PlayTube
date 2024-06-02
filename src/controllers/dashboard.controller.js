@@ -22,6 +22,7 @@ const getChannelStats = asyncHandler(async (req, res) => {
       },
     },
   ]);
+
   const subscriber = await Subscription.aggregate([
     {
       $match: {
@@ -32,6 +33,7 @@ const getChannelStats = asyncHandler(async (req, res) => {
       $count: "totalSubscribers",
     },
   ]);
+
   const totalLikes = await Like.aggregate([
     {
       $match: {
@@ -80,15 +82,13 @@ const getChannelStats = asyncHandler(async (req, res) => {
     },
   ]);
 
-  console.log("totalLikes: ", totalLikes);
-
-  channelStats.totalViews = videoStates[0].totalViews;
-  channelStats.totalVideos = videoStates[0].totalVideos;
-  // FIXME : Not working throwing errors
-  channelStats.totalSubscribers = subscriber && subscriber[0]?.totalSubscribers;
-  channelStats.totalLikes = totalLikes[0].likeCount;
-
-  // console.log(channelStats);
+  // TESTME : Not working throwing errors
+  channelStats.ownerName = req.user.fullName;
+  channelStats.totalViews = (videoStates && videoStates[0]?.totalViews) || 0;
+  channelStats.totalVideos = (videoStates && videoStates[0]?.totalVideos) || 0;
+  channelStats.totalSubscribers =
+    (subscriber && subscriber[0]?.totalSubscribers) || 0;
+  channelStats.totalLikes = (totalLikes && totalLikes[0]?.likeCount) || 0;
 
   return res
     .status(200)
@@ -102,6 +102,35 @@ const getChannelVideos = asyncHandler(async (req, res) => {
     {
       $match: {
         owner: req.user._id,
+      },
+    },
+    {
+      $lookup: {
+        from: "likes",
+        localField: "_id",
+        foreignField: "video",
+        as: "likesConunt",
+        pipeline: [
+          {
+            $group: {
+              _id: "video",
+              likesConunt: { $sum: 1 },
+            },
+          }
+        ],
+      },
+    },
+    {
+      $unwind: {
+        path: "$likesConunt",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $addFields: {
+        likesConunt: {
+          $ifNull: ["$likesConunt.likesConunt", 0],
+        },
       },
     },
     {

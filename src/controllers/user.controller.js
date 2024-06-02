@@ -277,9 +277,9 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 });
 
 const updateUserProfile = asyncHandler(async (req, res) => {
-  const { fullName, email } = req.body;
+  const { fullName, email, username } = req.body;
 
-  if (!fullName && !email) {
+  if (!fullName && !email && !username) {
     throw new APIError(400, "At least one field required");
   }
 
@@ -288,6 +288,15 @@ const updateUserProfile = asyncHandler(async (req, res) => {
   if (fullName) user.fullName = fullName;
 
   if (email) user.email = email;
+
+  if (username) {
+    const isExists = await User.find({ username });
+    if (isExists?.length > 0) {
+      throw new APIError(400, "Username not available");
+    } else {
+      user.username = username;
+    }
+  }
 
   const updatedUserData = await user.save();
 

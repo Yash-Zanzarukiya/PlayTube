@@ -37,20 +37,30 @@ const toggleSubscription = asyncHandler(async (req, res) => {
       new APIResponse(
         200,
         { isSubscribed },
-        "Subscription toggled successfully"
+        `${isSubscribed ? "Subscribed successfully" : "Un-Subscribed successfully"}`
       )
     );
 });
 
 // controller to return subscriber list of a channel
 const getUserChannelSubscribers = asyncHandler(async (req, res) => {
-  const { channelId } = req.params;
+  const { channelId = req.user?._id } = req.params;
 
   if (!isValidObjectId(channelId)) throw new APIError(400, "Invalid ChannelId");
 
   const subscriberList = await Subscription.aggregate([
     {
-      $match: { channel: new mongoose.Types.ObjectId(channelId) },
+      $match: {
+        channel: new mongoose.Types.ObjectId(channelId),
+      },
+    },
+    {
+      $lookup: {
+        from: "subscriptions",
+        localField: "channel",
+        foreignField: "subscriber",
+        as: "subscribedChannels",
+      },
     },
     {
       $lookup: {
@@ -60,28 +70,67 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
         as: "subscriber",
         pipeline: [
           {
+            $lookup: {
+              from: "subscriptions",
+              localField: "_id",
+              foreignField: "channel",
+              as: "subscribersSubscribers",
+            },
+          },
+          {
             $project: {
               username: 1,
-              fullName: 1,
-              email: 1,
               avatar: 1,
+              fullName: 1,
+              subscribersCount: {
+                $size: "$subscribersSubscribers",
+              },
             },
           },
         ],
       },
     },
     {
+      $unwind: {
+        path: "$subscriber",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
       $addFields: {
-        subscriberCount: {
-          $size: "$subscriber",
+        "subscriber.isSubscribed": {
+          $cond: {
+            if: {
+              $in: ["$subscriber._id", "$subscribedChannels.channel"],
+            },
+            then: true,
+            else: false,
+          },
+        },
+      },
+    },
+    {
+      $group: {
+        _id: "channel",
+        subscriber: {
+          $push: "$subscriber",
         },
       },
     },
   ]);
 
+  const subscribers =
+    subscriberList?.length > 0 ? subscriberList[0].subscriber : [];
+
   return res
     .status(200)
-    .json(new APIResponse(200, subscriberList, "Subscriber Sent Successfully"));
+    .json(
+      new APIResponse(
+        200,
+        { subscribers, subscribersCount: subscribers.length },
+        "Subscriber Sent Successfully"
+      )
+    );
 });
 
 // controller to return channel list to which user has subscribed
@@ -92,11 +141,13 @@ const getSubscribedChannels = asyncHandler(async (req, res) => {
     throw new APIError(400, "Invalid subscriberId");
 
   const subscribedChannels = await Subscription.aggregate([
+    // get all subscribed channels
     {
       $match: {
         subscriber: new mongoose.Types.ObjectId(subscriberId),
       },
     },
+    // get channel details
     {
       $lookup: {
         from: "users",
@@ -117,22 +168,17 @@ const getSubscribedChannels = asyncHandler(async (req, res) => {
     {
       $unwind: "$channel",
     },
+    // get channel's subscribers
     {
       $lookup: {
         from: "subscriptions",
         localField: "channel._id",
         foreignField: "channel",
         as: "channelSubscribers",
-        pipeline: [
-          {
-            $project: {
-              subscriber: 1,
-            },
-          },
-        ],
       },
     },
     {
+      // logic if current user has subscribed the channel or not
       $addFields: {
         "channel.isSubscribed": {
           $cond: {
@@ -141,10 +187,15 @@ const getSubscribedChannels = asyncHandler(async (req, res) => {
             else: false,
           },
         },
+        // channel subscriber count
+        "channel.subscribersCount": {
+          $size: "$channelSubscribers",
+        },
       },
     },
     {
       $project: {
+        _id: 0,
         channel: 1,
       },
     },
