@@ -4,6 +4,7 @@ import { Like } from "../models/like.model.js";
 import { Comment } from "../models/comment.model.js";
 import { Subscription } from "../models/subscription.model.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import mongoose from "mongoose";
 
 const getChannelStats = asyncHandler(async (req, res) => {
   const channelStats = {};
@@ -101,59 +102,72 @@ const getChannelVideos = asyncHandler(async (req, res) => {
   const allVideos = await Video.aggregate([
     {
       $match: {
-        owner: req.user._id,
+        owner: new mongoose.Types.ObjectId(req.user._id),
       },
     },
+    // lookup for likes
     {
       $lookup: {
         from: "likes",
         localField: "_id",
         foreignField: "video",
-        as: "likesConunt",
+        as: "likes",
         pipeline: [
           {
-            $group: {
-              _id: "video",
-              likesConunt: { $sum: 1 },
-            },
-          }
-        ],
-      },
-    },
-    {
-      $unwind: {
-        path: "$likesConunt",
-        preserveNullAndEmptyArrays: true,
-      },
-    },
-    {
-      $addFields: {
-        likesConunt: {
-          $ifNull: ["$likesConunt.likesConunt", 0],
-        },
-      },
-    },
-    {
-      $lookup: {
-        from: "users",
-        localField: "owner",
-        foreignField: "_id",
-        as: "owner",
-        pipeline: [
-          {
-            $project: {
-              fullName: 1,
-              avatar: 1,
-              username: 1,
+            $match: {
+              liked: true,
             },
           },
         ],
       },
     },
+    // lookup for dislikes
     {
-      $unwind: "$owner",
+      $lookup: {
+        from: "likes",
+        localField: "_id",
+        foreignField: "video",
+        as: "dislikes",
+        pipeline: [
+          {
+            $match: {
+              liked: false,
+            },
+          },
+        ],
+      },
+    },
+    // lookup for comments
+    {
+      $lookup: {
+        from: "comments",
+        localField: "_id",
+        foreignField: "video",
+        as: "comments",
+      },
+    },
+    {
+      $project: {
+        title: 1,
+        thumbnail: 1,
+        isPublished: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        description: 1,
+        views: 1,
+        likesCount: {
+          $size: "$likes",
+        },
+        dislikesCount: {
+          $size: "$dislikes",
+        },
+        commentsCount: {
+          $size: "$comments",
+        },
+      },
     },
   ]);
+
   return res
     .status(200)
     .json(new APIResponse(200, allVideos, "All videos fetched successfully"));
