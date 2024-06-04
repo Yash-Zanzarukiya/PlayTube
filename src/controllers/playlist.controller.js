@@ -7,11 +7,11 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 const createPlaylist = asyncHandler(async (req, res) => {
   const { name, description } = req.body;
 
-  if (!name || !description) throw new APIError(400, "All fields required");
+  if (!name) throw new APIError(400, "Name required");
 
   const playlist = await Playlist.create({
     name,
-    description,
+    description: description || "",
     owner: req.user._id,
   });
 
@@ -307,6 +307,37 @@ const updatePlaylist = asyncHandler(async (req, res) => {
     );
 });
 
+const getVideoSavePlaylists = asyncHandler(async (req, res) => {
+  const { videoId } = req.params;
+
+  if (!isValidObjectId(videoId))
+    throw new APIError(400, "Valid videoId required");
+
+  const playlists = await Playlist.aggregate([
+    {
+      $match: {
+        owner: new mongoose.Types.ObjectId(req.user?._id),
+      },
+    },
+    {
+      $project: {
+        name: 1,
+        isVideoPresent: {
+          $cond: {
+            if: { $in: [new mongoose.Types.ObjectId(videoId), "$videos"] },
+            then: true,
+            else: false,
+          },
+        },
+      },
+    },
+  ]);
+
+  return res
+    .status(200)
+    .json(new APIResponse(200, playlists, "Playlists sent successfully"));
+});
+
 export {
   createPlaylist,
   getUserPlaylists,
@@ -315,4 +346,5 @@ export {
   removeVideoFromPlaylist,
   deletePlaylist,
   updatePlaylist,
+  getVideoSavePlaylists,
 };

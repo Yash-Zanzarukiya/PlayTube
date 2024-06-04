@@ -127,7 +127,7 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
     .json(
       new APIResponse(
         200,
-        { subscribers, subscribersCount: subscribers.length },
+        subscribers,
         "Subscriber Sent Successfully"
       )
     );
@@ -194,21 +194,24 @@ const getSubscribedChannels = asyncHandler(async (req, res) => {
       },
     },
     {
-      $project: {
-        _id: 0,
-        channel: 1,
+      $group: {
+        _id: "subscriber",
+        subscribedChannels: {
+          $push: "$channel",
+        },
       },
     },
   ]);
 
+  const users =
+    subscribedChannels?.length > 0
+      ? subscribedChannels[0].subscribedChannels
+      : [];
+
   return res
     .status(200)
     .json(
-      new APIResponse(
-        200,
-        subscribedChannels,
-        "Subscribed channel list sent successfully"
-      )
+      new APIResponse(200, users, "Subscribed channel list sent successfully")
     );
 });
 

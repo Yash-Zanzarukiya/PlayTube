@@ -34,12 +34,19 @@ const createTweet = asyncHandler(async (req, res) => {
 
 const getUserTweets = asyncHandler(async (req, res) => {
   const { userId } = req.params;
-  if (!isValidObjectId(userId)) throw new APIError(400, "Invalid userId");
+  if (!isValidObjectId(userId))
+    throw new APIError(400, "Invalid userId: " + userId);
 
   const allTweets = await Tweet.aggregate([
     {
       $match: {
         owner: new mongoose.Types.ObjectId(userId),
+      },
+    },
+    // sort by latest
+    {
+      $sort: {
+        createdAt: -1,
       },
     },
     // fetch likes of tweet
