@@ -4,6 +4,8 @@ import { APIError } from "../utils/APIError.js";
 import { APIResponse } from "../utils/APIResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
+// TODO: Review and Enhance all controllers
+
 const createPlaylist = asyncHandler(async (req, res) => {
   const { name, description } = req.body;
 
@@ -284,21 +286,22 @@ const updatePlaylist = asyncHandler(async (req, res) => {
   const { playlistId } = req.params;
   const { name, description } = req.body;
 
-  if (!isValidObjectId(playlistId) || (!name && !description)) {
+  if (!isValidObjectId(playlistId) || (!name && !description))
     throw new APIError(400, "All fields required");
-  }
 
   const playlist = await Playlist.findById(playlistId);
   if (!playlist) throw new APIError(400, "No Playlist Found");
 
-  if (name) playlist.name = name;
-  if (description) playlist.description = description;
+  playlist.name = name.trim();
+  playlist.description = description.trim();
+
+  // if (name) playlist.name = name;
+  // if (description) playlist.description = description;
 
   const updatedPlaylist = await playlist.save();
 
-  if (!updatedPlaylist) {
+  if (!updatedPlaylist)
     throw new APIError(500, "Error while updating playlist");
-  }
 
   return res
     .status(200)

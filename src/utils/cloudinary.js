@@ -11,6 +11,8 @@ const uploadPhotoOnCloudinary = async (localFilePath) => {
   try {
     if (!localFilePath) return null;
 
+    console.log("uploading thumbnail...");
+
     //Uploading File to Cloudinary
     const cldnry_res = await cloudinary.uploader.upload(localFilePath, {
       resource_type: "auto",
@@ -30,6 +32,8 @@ const uploadPhotoOnCloudinary = async (localFilePath) => {
 const uploadVideoOnCloudinary = async (localFilePath) => {
   try {
     if (!localFilePath) return null;
+
+    console.log("uploading video...");
 
     //Uploading File to Cloudinary
     const cldnry_res = await cloudinary.uploader.upload(localFilePath, {
@@ -56,6 +60,8 @@ const deleteImageOnCloudinary = async (URL) => {
       /(?:image|video)\/upload\/v\d+\/videotube\/(photos|videos)\/(.+?)\.\w+$/
     )[2];
 
+    console.log("deleting image from cloudinary...");
+
     const cldnry_res = await cloudinary.uploader.destroy(
       `videotube/photos/${ImageId}`,
       {
@@ -77,6 +83,8 @@ const deleteVideoOnCloudinary = async (URL) => {
     let VideoId = URL.match(
       /(?:image|video)\/upload\/v\d+\/videotube\/(photos|videos)\/(.+?)\.\w+$/
     )[2];
+
+    console.log("deleting video from cloudinary...");
 
     const cldnry_res = await cloudinary.uploader.destroy(
       `videotube/videos/${VideoId}`,

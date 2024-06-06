@@ -10,6 +10,7 @@ import {
 } from "../controllers/video.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
+import { checkAborted } from "../middlewares/abortedRequest.middleware.js";
 
 const router = Router();
 
@@ -30,6 +31,7 @@ router
         maxCount: 1,
       },
     ]),
+    checkAborted,
     publishAVideo
   );
 

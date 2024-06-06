@@ -9,6 +9,8 @@ import { APIResponse } from "../utils/APIResponse.js";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 
+// TODO: Review and Enhance all controllers
+
 const generateAccessAndRefreshToken = async (_id) => {
   try {
     const user = await User.findById(_id);
