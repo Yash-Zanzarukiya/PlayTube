@@ -6,7 +6,10 @@ const app = express();
 
 app.use(
   cors({
-    origin: "https://play-tube-frontend-by-yashpz.vercel.app",
+    origin: [
+      "https://play-tube-frontend-by-yashpz.vercel.app/*",
+      "https://play-tube-by-yashpz.vercel.app",
+    ],
     credentials: true,
   })
 );
