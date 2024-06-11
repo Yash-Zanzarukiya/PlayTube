@@ -26,6 +26,7 @@ import commentRouter from "./routes/comment.routes.js";
 import likeRouter from "./routes/like.routes.js";
 import dashboardRouter from "./routes/dashboard.routes.js";
 import healthcheckRouter from "./routes/healthcheck.routes.js";
+import aboutRouter from "./routes/about.routes.js";
 
 // http://localhost:3000/api/v1/healthcheck/routes
 app.use("/api/v1/healthcheck", healthcheckRouter);
@@ -53,5 +54,8 @@ app.use("/api/v1/like", likeRouter);
 
 // http://localhost:3000/api/v1/dashboard/routes
 app.use("/api/v1/dashboard", dashboardRouter);
+
+// http://localhost:3000/api/v1/about/user
+app.use("/api/v1/about/user/", aboutRouter);
 
 export { app };

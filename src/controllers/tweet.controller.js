@@ -1,5 +1,6 @@
 import { Tweet } from "../models/tweet.model.js";
 import { Like } from "../models/like.model.js";
+import { Subscription } from "../models/subscription.model.js";
 import mongoose, { isValidObjectId } from "mongoose";
 import { APIError } from "../utils/APIError.js";
 import { APIResponse } from "../utils/APIResponse.js";
@@ -12,16 +13,16 @@ const createTweet = asyncHandler(async (req, res) => {
 
   if (!tweet) throw new APIError(400, "Tweet content required");
 
-  const tweetRes = await Tweet.create({ content: tweet, owner: req.user._id });
+  const tweetRes = await Tweet.create({ content: tweet, owner: req.user?._id });
 
   if (!tweetRes) throw new APIError(500, "Error occured while creating tweet");
 
   let newTweet = {
     ...tweetRes._doc,
     owner: {
-      fullName: req.user.fullName,
-      username: req.user.username,
-      avatar: req.user.avatar,
+      fullName: req.user?.fullName,
+      username: req.user?.username,
+      avatar: req.user?.avatar,
     },
     totalDisLikes: 0,
     totalLikes: 0,
@@ -36,6 +37,7 @@ const createTweet = asyncHandler(async (req, res) => {
 
 const getUserTweets = asyncHandler(async (req, res) => {
   const { userId } = req.params;
+
   if (!isValidObjectId(userId))
     throw new APIError(400, "Invalid userId: " + userId);
 
@@ -58,6 +60,63 @@ const getUserTweets = asyncHandler(async (req, res) => {
         localField: "_id",
         foreignField: "tweet",
         as: "likes",
+        pipeline: [
+          {
+            $match: {
+              liked: true,
+            },
+          },
+          {
+            $group: {
+              _id: "liked",
+              owners: { $push: "$likedBy" },
+            },
+          },
+        ],
+      },
+    },
+    {
+      $lookup: {
+        from: "likes",
+        localField: "_id",
+        foreignField: "tweet",
+        as: "dislikes",
+        pipeline: [
+          {
+            $match: {
+              liked: false,
+            },
+          },
+          {
+            $group: {
+              _id: "liked",
+              owners: { $push: "$likedBy" },
+            },
+          },
+        ],
+      },
+    },
+    // Reshape Likes and dislikes
+    {
+      $addFields: {
+        likes: {
+          $cond: {
+            if: {
+              $gt: [{ $size: "$likes" }, 0],
+            },
+            then: { $first: "$likes.owners" },
+            else: [],
+          },
+        },
+        dislikes: {
+          $cond: {
+            if: {
+              $gt: [{ $size: "$dislikes" }, 0],
+            },
+            then: { $first: "$dislikes.owners" },
+            else: [],
+          },
+        },
       },
     },
     // get owner details
@@ -81,7 +140,6 @@ const getUserTweets = asyncHandler(async (req, res) => {
     {
       $unwind: "$owner",
     },
-    //TODO: Optimize this part in all over if possible
     {
       $project: {
         content: 1,
@@ -89,47 +147,15 @@ const getUserTweets = asyncHandler(async (req, res) => {
         updatedAt: 1,
         owner: 1,
         totalLikes: {
-          $size: {
-            $filter: {
-              input: "$likes",
-              as: "like",
-              cond: { $eq: ["$$like.liked", true] },
-            },
-          },
+          $size: "$likes",
         },
         totalDisLikes: {
-          $size: {
-            $filter: {
-              input: "$likes",
-              as: "like",
-              cond: { $eq: ["$$like.liked", false] },
-            },
-          },
+          $size: "$dislikes",
         },
         isLiked: {
           $cond: {
             if: {
-              $gt: [
-                {
-                  $size: {
-                    $filter: {
-                      input: "$likes",
-                      as: "like",
-                      cond: {
-                        $and: [
-                          {
-                            $eq: ["$$like.likedBy", req.user?._id],
-                          },
-                          {
-                            $eq: ["$$like.liked", true],
-                          },
-                        ],
-                      },
-                    },
-                  },
-                },
-                0,
-              ],
+              $in: [req.user?._id, "$likes"],
             },
             then: true,
             else: false,
@@ -138,23 +164,300 @@ const getUserTweets = asyncHandler(async (req, res) => {
         isDisLiked: {
           $cond: {
             if: {
-              $gt: [
-                {
-                  $size: {
-                    $filter: {
-                      input: "$likes",
-                      as: "like",
-                      cond: {
-                        $and: [
-                          { $eq: ["$$like.likedBy", req.user?._id] },
-                          { $eq: ["$$like.liked", false] },
-                        ],
-                      },
-                    },
-                  },
-                },
-                0,
-              ],
+              $in: [req.user?._id, "$dislikes"],
+            },
+            then: true,
+            else: false,
+          },
+        },
+      },
+    },
+  ]);
+
+  return res
+    .status(200)
+    .json(new APIResponse(200, allTweets, "all tweets send successfully"));
+});
+
+const getAllTweets = asyncHandler(async (req, res) => {
+  const allTweets = await Tweet.aggregate([
+    // sort by latest
+    {
+      $sort: {
+        createdAt: -1,
+      },
+    },
+    // fetch likes of tweet
+    {
+      $lookup: {
+        from: "likes",
+        localField: "_id",
+        foreignField: "tweet",
+        as: "likes",
+        pipeline: [
+          {
+            $match: {
+              liked: true,
+            },
+          },
+          {
+            $group: {
+              _id: "liked",
+              owners: { $push: "$likedBy" },
+            },
+          },
+        ],
+      },
+    },
+    {
+      $lookup: {
+        from: "likes",
+        localField: "_id",
+        foreignField: "tweet",
+        as: "dislikes",
+        pipeline: [
+          {
+            $match: {
+              liked: false,
+            },
+          },
+          {
+            $group: {
+              _id: "liked",
+              owners: { $push: "$likedBy" },
+            },
+          },
+        ],
+      },
+    },
+    // Reshape Likes and dislikes
+    {
+      $addFields: {
+        likes: {
+          $cond: {
+            if: {
+              $gt: [{ $size: "$likes" }, 0],
+            },
+            then: { $first: "$likes.owners" },
+            else: [],
+          },
+        },
+        dislikes: {
+          $cond: {
+            if: {
+              $gt: [{ $size: "$dislikes" }, 0],
+            },
+            then: { $first: "$dislikes.owners" },
+            else: [],
+          },
+        },
+      },
+    },
+    // get owner details
+    {
+      $lookup: {
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
+        as: "owner",
+        pipeline: [
+          {
+            $project: {
+              username: 1,
+              avatar: 1,
+              fullName: 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $unwind: "$owner",
+    },
+    {
+      $project: {
+        content: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        owner: 1,
+        isOwner: {
+          $cond: {
+            if: { $eq: [req.user?._id, "$owner._id"] },
+            then: true,
+            else: false,
+          },
+        },
+        totalLikes: {
+          $size: "$likes",
+        },
+        totalDisLikes: {
+          $size: "$dislikes",
+        },
+        isLiked: {
+          $cond: {
+            if: {
+              $in: [req.user?._id, "$likes"],
+            },
+            then: true,
+            else: false,
+          },
+        },
+        isDisLiked: {
+          $cond: {
+            if: {
+              $in: [req.user?._id, "$dislikes"],
+            },
+            then: true,
+            else: false,
+          },
+        },
+      },
+    },
+  ]);
+
+  return res
+    .status(200)
+    .json(new APIResponse(200, allTweets, "all tweets send successfully"));
+});
+
+const getAllUserFeedTweets = asyncHandler(async (req, res) => {
+  const subscriptions = await Subscription.find({ subscriber: req.user?._id });
+
+  const subscribedChannels = subscriptions.map((item) => item.channel);
+
+  const allTweets = await Tweet.aggregate([
+    {
+      $match: {
+        owner: {
+          $in: subscribedChannels,
+        },
+      },
+    },
+    // sort by latest
+    {
+      $sort: {
+        createdAt: -1,
+      },
+    },
+    // fetch likes of tweet
+    {
+      $lookup: {
+        from: "likes",
+        localField: "_id",
+        foreignField: "tweet",
+        as: "likes",
+        pipeline: [
+          {
+            $match: {
+              liked: true,
+            },
+          },
+          {
+            $group: {
+              _id: "liked",
+              owners: { $push: "$likedBy" },
+            },
+          },
+        ],
+      },
+    },
+    {
+      $lookup: {
+        from: "likes",
+        localField: "_id",
+        foreignField: "tweet",
+        as: "dislikes",
+        pipeline: [
+          {
+            $match: {
+              liked: false,
+            },
+          },
+          {
+            $group: {
+              _id: "liked",
+              owners: { $push: "$likedBy" },
+            },
+          },
+        ],
+      },
+    },
+    // Reshape Likes and dislikes
+    {
+      $addFields: {
+        likes: {
+          $cond: {
+            if: {
+              $gt: [{ $size: "$likes" }, 0],
+            },
+            then: { $first: "$likes.owners" },
+            else: [],
+          },
+        },
+        dislikes: {
+          $cond: {
+            if: {
+              $gt: [{ $size: "$dislikes" }, 0],
+            },
+            then: { $first: "$dislikes.owners" },
+            else: [],
+          },
+        },
+      },
+    },
+    // get owner details
+    {
+      $lookup: {
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
+        as: "owner",
+        pipeline: [
+          {
+            $project: {
+              username: 1,
+              avatar: 1,
+              fullName: 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $unwind: "$owner",
+    },
+    {
+      $project: {
+        content: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        owner: 1,
+        isOwner: {
+          $cond: {
+            if: { $eq: [req.user?._id, "$owner._id"] },
+            then: true,
+            else: false,
+          },
+        },
+        totalLikes: {
+          $size: "$likes",
+        },
+        totalDisLikes: {
+          $size: "$dislikes",
+        },
+        isLiked: {
+          $cond: {
+            if: {
+              $in: [req.user?._id, "$likes"],
+            },
+            then: true,
+            else: false,
+          },
+        },
+        isDisLiked: {
+          $cond: {
+            if: {
+              $in: [req.user?._id, "$dislikes"],
             },
             then: true,
             else: false,
@@ -211,4 +514,4 @@ const deleteTweet = asyncHandler(async (req, res) => {
     );
 });
 
-export { createTweet, getUserTweets, updateTweet, deleteTweet };
+export { createTweet, getUserTweets, updateTweet, deleteTweet, getAllTweets,getAllUserFeedTweets };

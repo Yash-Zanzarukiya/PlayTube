@@ -14,7 +14,7 @@ const getChannelStats = asyncHandler(async (req, res) => {
   const videoStates = await Video.aggregate([
     {
       $match: {
-        owner: req.user._id,
+        owner: req.user?._id,
       },
     },
     {
@@ -29,7 +29,7 @@ const getChannelStats = asyncHandler(async (req, res) => {
   const subscriber = await Subscription.aggregate([
     {
       $match: {
-        channel: req.user._id,
+        channel: req.user?._id,
       },
     },
     {
@@ -41,6 +41,7 @@ const getChannelStats = asyncHandler(async (req, res) => {
     {
       $match: {
         video: { $ne: null },
+        liked: true,
       },
     },
     {
@@ -48,11 +49,11 @@ const getChannelStats = asyncHandler(async (req, res) => {
         from: "videos",
         localField: "video",
         foreignField: "_id",
-        as: "channelvideo",
+        as: "channelVideo",
         pipeline: [
           {
             $match: {
-              owner: req.user._id,
+              owner: req.user?._id,
             },
           },
           {
@@ -65,14 +66,14 @@ const getChannelStats = asyncHandler(async (req, res) => {
     },
     {
       $addFields: {
-        channelvideo: {
-          $first: "$channelvideo",
+        channelVideo: {
+          $first: "$channelVideo",
         },
       },
     },
     {
       $match: {
-        channelvideo: { $ne: null },
+        channelVideo: { $ne: null },
       },
     },
     {
@@ -85,8 +86,7 @@ const getChannelStats = asyncHandler(async (req, res) => {
     },
   ]);
 
-  // TESTME : Not working throwing errors
-  channelStats.ownerName = req.user.fullName;
+  channelStats.ownerName = req.user?.fullName;
   channelStats.totalViews = (videoStates && videoStates[0]?.totalViews) || 0;
   channelStats.totalVideos = (videoStates && videoStates[0]?.totalVideos) || 0;
   channelStats.totalSubscribers =
@@ -104,7 +104,12 @@ const getChannelVideos = asyncHandler(async (req, res) => {
   const allVideos = await Video.aggregate([
     {
       $match: {
-        owner: new mongoose.Types.ObjectId(req.user._id),
+        owner: new mongoose.Types.ObjectId(req.user?._id),
+      },
+    },
+    {
+      $sort: {
+        createdAt: -1,
       },
     },
     // lookup for likes

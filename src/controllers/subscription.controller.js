@@ -14,19 +14,19 @@ const toggleSubscription = asyncHandler(async (req, res) => {
   let isSubscribed;
 
   const findRes = await Subscription.findOne({
-    subscriber: req.user._id,
+    subscriber: req.user?._id,
     channel: channelId,
   });
 
   if (findRes) {
     const res = await Subscription.deleteOne({
-      subscriber: req.user._id,
+      subscriber: req.user?._id,
       channel: channelId,
     });
     isSubscribed = false;
   } else {
     const newSub = await Subscription.create({
-      subscriber: req.user._id,
+      subscriber: req.user?._id,
       channel: channelId,
     });
     if (!newSub) throw new APIError(500, "Failed to toggle Subscription");
@@ -126,13 +126,7 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(
-      new APIResponse(
-        200,
-        subscribers,
-        "Subscriber Sent Successfully"
-      )
-    );
+    .json(new APIResponse(200, subscribers, "Subscriber Sent Successfully"));
 });
 
 // controller to return channel list to which user has subscribed

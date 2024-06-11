@@ -14,7 +14,7 @@ const getLikedVideos = asyncHandler(async (req, res) => {
     {
       $match: {
         video: { $ne: null },
-        likedBy: new mongoose.Types.ObjectId(req.user._id),
+        likedBy: new mongoose.Types.ObjectId(req.user?._id),
       },
     },
     {
@@ -94,7 +94,7 @@ const toggleLike = asyncHandler(async (req, res) => {
 
     userLike = await Like.find({
       comment: commentId,
-      likedBy: req.user._id,
+      likedBy: req.user?._id,
     });
   } else if (videoId) {
     const video = await Video.findById(videoId);
@@ -110,7 +110,7 @@ const toggleLike = asyncHandler(async (req, res) => {
 
     userLike = await Like.find({
       tweet: tweetId,
-      likedBy: req.user._id,
+      likedBy: req.user?._id,
     });
   }
 
@@ -217,13 +217,13 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
   const video = await Video.findById(videoId);
   if (!video) throw new APIError(400, "video not found");
 
-  let isLiked = await Like.find({ video: videoId, likedBy: req.user._id });
+  let isLiked = await Like.find({ video: videoId, likedBy: req.user?._id });
 
   if (isLiked && isLiked.length > 0) {
     const like = await Like.findByIdAndDelete(isLiked[0]._id);
     isLiked = false;
   } else {
-    const like = await Like.create({ video: videoId, likedBy: req.user._id });
+    const like = await Like.create({ video: videoId, likedBy: req.user?._id });
     if (!like) throw new APIError(500, "error while toggling like");
     isLiked = true;
   }
@@ -257,7 +257,7 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
 
   let userLike = await Like.find({
     comment: commentId,
-    likedBy: req.user._id,
+    likedBy: req.user?._id,
   });
 
   let isLiked = false;
@@ -300,7 +300,7 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
     // entry is not present so create new
     const like = await Like.create({
       comment: commentId,
-      likedBy: req.user._id,
+      likedBy: req.user?._id,
       liked: reqLike,
     });
     if (!like) throw new APIError(500, "error while toggling like");
@@ -333,13 +333,13 @@ const toggleTweetLike = asyncHandler(async (req, res) => {
   const tweet = await Tweet.findById(tweetId);
   if (!tweet) throw new APIError(400, "no tweet found");
 
-  let isLiked = await Like.find({ tweet: tweetId, likedBy: req.user._id });
+  let isLiked = await Like.find({ tweet: tweetId, likedBy: req.user?._id });
 
   if (isLiked?.length > 0) {
     await Like.findByIdAndDelete(isLiked[0]._id);
     isLiked = false;
   } else {
-    const like = await Like.create({ tweet: tweetId, likedBy: req.user._id });
+    const like = await Like.create({ tweet: tweetId, likedBy: req.user?._id });
     if (!like) throw new APIError(500, "error while toggling like");
     isLiked = true;
   }

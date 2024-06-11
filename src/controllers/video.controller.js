@@ -10,246 +10,165 @@ import {
   uploadPhotoOnCloudinary,
   uploadVideoOnCloudinary,
 } from "../utils/cloudinary.js";
+import { stopWords } from "../utils/helperData.js";
 import { Comment } from "../models/comment.model.js";
 import { Like } from "../models/like.model.js";
 import { Playlist } from "../models/playlist.model.js";
 import fs from "fs";
 
-// const getAllVideos = asyncHandler(async (req, res) => {
-//   //FIXME: get all videos based on query, sort, pagination
-//   const {
-//     page = 1,
-//     limit = 10,
-//     query = "",
-//     sortBy,
-//     sortType = 1,
-//     userId,
-//   } = req.query;
+// TODO: write logic of title and description competition
 
-//   // console.log(page, limit, sortBy, sortType);
-
-//   const options = {
-//     page: parseInt(page, 10),
-//     limit: parseInt(limit, 10),
-//   };
-
-//   const stopWords = [
-//     "a",
-//     "an",
-//     "and",
-//     "are",
-//     "as",
-//     "at",
-//     "be",
-//     "by",
-//     "for",
-//     "from",
-//     "has",
-//     "he",
-//     "in",
-//     "is",
-//     "it",
-//     "its",
-//     "of",
-//     "on",
-//     "that",
-//     "the",
-//     "to",
-//     "was",
-//     "were",
-//     "will",
-//     "with",
-//     "the",
-//     "and",
-//     "are",
-//     "as",
-//     "at",
-//     "be",
-//     "but",
-//     "by",
-//     "for",
-//     "if",
-//     "in",
-//     "into",
-//     "is",
-//     "it",
-//     "no",
-//     "not",
-//     "of",
-//     "on",
-//     "or",
-//     "such",
-//     "that",
-//     "their",
-//     "then",
-//     "there",
-//     "these",
-//     "they",
-//     "this",
-//     "to",
-//     "was",
-//     "will",
-//     "with",
-//     "would",
-//   ];
-
-//   const sort = {};
-//   if (sortBy) {
-//     sort[sortBy] = parseInt(sortType);
-//   } else {
-//     sort.createdAt = -1;
-//   }
-
-//   let filters = { isPublished: true };
-//   if (isValidObjectId(userId)) filters.owner = userId;
-
-//   // filter video by given filters
-//   // TODO Query is not working
-//   let pipeline = [
-//     {
-//       $match: {
-//         ...filters,
-//       },
-//     },
-//   ];
-
-//   // console.log(query);
-//   // if query is given filter the videos
-//   if (query) {
-//     const words = query.split(" ");
-//     const filteredWords = words.filter((word) => !stopWords.includes(word));
-
-//     pipeline.push(
-//       {
-//         $addFields: {
-//           matchWordCount: {
-//             $filter: {
-//               input: filteredWords,
-//               as: "word",
-//               cond: { $ne: [{ $indexOfBytes: ["$title", "$$word"] }, -1] },
-//             },
-//           },
-//         },
-//       },
-//       {
-//         $match: {
-//           matchWordCount: { $ne: [] },
-//         },
-//       }
-//     );
-//     sort.matchWordCount = -1;
-//   }
-
-//   // sort the documents
-//   //TODO sorting is not working
-//   // pipeline.push({
-//   //   $sort: {
-//   //     ...sort,
-//   //   },
-//   // });
-
-//   //get owner detail
-//   //TODO Send Owner Field
-//   pipeline.push({
-//     $lookup: {
-//       from: "users",
-//       localField: "owner",
-//       foreignField: "_id",
-//       as: "owner",
-//       pipeline: [
-//         {
-//           $project: {
-//             username: 1,
-//             fullName: 1,
-//             avatar: 1,
-//           },
-//         },
-//       ],
-//     },
-//   });
-
-//   pipeline.push({
-//     $unwind: "$owner",
-//   });
-
-// pipeline = [
-//   {
-//     $match: {
-//       isPublished: true,
-//     },
-//   },
-//   {
-//     $lookup: {
-//       from: "users",
-//       localField: "owner",
-//       foreignField: "_id",
-//       as: "owner",
-//       pipeline: [
-//         {
-//           $project: {
-//             username: 1,
-//             fullName: 1,
-//             avatar: 1,
-//           },
-//         },
-//       ],
-//     },
-//   },
-//   {
-//     $unwind: "$owner",
-//   },
-// ];
-
-//   console.log("pipeline: ", Array.from(pipeline));
-
-//   const allVideos = await Video.aggregate(Array.from(pipeline));
-
-// Video.aggregatePaginate(allVideos, options, function (err, results) {
-//   if (!err) {
-//     const {
-//       docs,
-//       totalDocs,
-//       limit,
-//       page,
-//       totalPages,
-//       pagingCounter,
-//       hasPrevPage,
-//       hasNextPage,
-//       prevPage,
-//       nextPage,
-//     } = results;
-
-//       return res.status(200).json(
-//         new APIResponse(
-//           200,
-//           {
-//             videos: docs,
-//             totalDocs,
-//             limit,
-//             page,
-//             totalPages,
-//             pagingCounter,
-//             hasPrevPage,
-//             hasNextPage,
-//             prevPage,
-//             nextPage,
-//           },
-//           "Videos fetched successfully"
-//         )
-//       );
-//     } else throw new APIError(500, err.message);
-//   });
-// });
-
-const getAllVideos = asyncHandler(async (req, res) => {
+export const getAllVideosByOption = asyncHandler(async (req, res) => {
   const {
     page = 1,
     limit = 10,
-    query = "",
+    search = "",
     sortBy,
-    sortType = 1,
+    sortType = "video",
+    order,
     userId,
   } = req.query;
+
+  // filter video by given filters
+  let filters = { isPublished: true };
+  if (isValidObjectId(userId))
+    filters.owner = new mongoose.Types.ObjectId(userId);
+
+  let pipeline = [
+    {
+      $match: {
+        ...filters,
+      },
+    },
+  ];
+
+  const sort = {};
+
+  // if query is given filter the videos
+  if (search) {
+    const queryWords = search
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, " ")
+      .split(" ");
+    const filteredWords = queryWords.filter(
+      (word) => !stopWords.includes(word)
+    );
+
+    console.log("search: ", search);
+    console.log("filteredWords: ", filteredWords);
+
+    pipeline.push({
+      $addFields: {
+        titleMatchWordCount: {
+          $size: {
+            $filter: {
+              input: filteredWords,
+              as: "word",
+              cond: {
+                $in: ["$$word", { $split: [{ $toLower: "$title" }, " "] }],
+              },
+            },
+          },
+        },
+      },
+    });
+
+    pipeline.push({
+      $addFields: {
+        descriptionMatchWordCount: {
+          $size: {
+            $filter: {
+              input: filteredWords,
+              as: "word",
+              cond: {
+                $in: [
+                  "$$word",
+                  { $split: [{ $toLower: "$description" }, " "] },
+                ],
+              },
+            },
+          },
+        },
+      },
+    });
+
+    sort.titleMatchWordCount = -1;
+  }
+
+  // sort the documents
+  if (sortBy) {
+    sort[sortBy] = parseInt(order);
+  } else if (!search && !sortBy) {
+    sort["createdAt"] = -1;
+  }
+
+  pipeline.push({
+    $sort: {
+      ...sort,
+    },
+  });
+
+  // fetch owner detail
+  pipeline.push(
+    {
+      $lookup: {
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
+        as: "owner",
+        pipeline: [
+          {
+            $project: {
+              username: 1,
+              fullName: 1,
+              avatar: 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $unwind: "$owner",
+    }
+  );
+
+  // pipeline.push({
+  //   $project: {
+  //     title: 1,
+  //     description: 1,
+  //     createdAt: 1,
+  //     titleMatchWordCount: 1,
+  //     descriptionMatchWordCount: 1,
+  //     owner: 1,
+  //   },
+  // });
+
+  // console.log("pipeline: ",pipeline);
+  const videoAggregate = Video.aggregate(pipeline);
+
+  const options = {
+    page: parseInt(page, 10),
+    limit: parseInt(limit, 10),
+  };
+
+  const allVideos = await Video.aggregatePaginate(videoAggregate, options);
+
+  const { docs, ...pagingInfo } = allVideos;
+
+  return res
+    .status(200)
+    .json(
+      new APIResponse(
+        200,
+        { videos: docs, pagingInfo },
+        "All Query Videos Sent Successfully"
+      )
+    );
+});
+
+const getAllVideos = asyncHandler(async (req, res) => {
+  const { userId } = req.query;
 
   let filters = { isPublished: true };
   if (isValidObjectId(userId))
@@ -364,7 +283,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
     description: description || "",
     duration: videoFile.duration,
     thumbnail: thumbnailFile.url,
-    owner: req.user._id,
+    owner: req.user?._id,
   });
 
   if (!video) throw new APIError(500, "Error while Publishing Video");
@@ -401,13 +320,71 @@ const getVideoById = asyncHandler(async (req, res) => {
         isPublished: true,
       },
     },
-    // get all like array
+    // get all likes array
     {
       $lookup: {
         from: "likes",
         localField: "_id",
         foreignField: "video",
         as: "likes",
+        pipeline: [
+          {
+            $match: {
+              liked: true,
+            },
+          },
+          {
+            $group: {
+              _id: "$liked",
+              likeOwners: { $push: "$likedBy" },
+            },
+          },
+        ],
+      },
+    },
+    // get all dislikes array
+    {
+      $lookup: {
+        from: "likes",
+        localField: "_id",
+        foreignField: "video",
+        as: "dislikes",
+        pipeline: [
+          {
+            $match: {
+              liked: false,
+            },
+          },
+          {
+            $group: {
+              _id: "$liked",
+              dislikeOwners: { $push: "$likedBy" },
+            },
+          },
+        ],
+      },
+    },
+    // adjust shapes of likes and dislikes
+    {
+      $addFields: {
+        likes: {
+          $cond: {
+            if: {
+              $gt: [{ $size: "$likes" }, 0],
+            },
+            then: { $first: "$likes.likeOwners" },
+            else: [],
+          },
+        },
+        dislikes: {
+          $cond: {
+            if: {
+              $gt: [{ $size: "$dislikes" }, 0],
+            },
+            then: { $first: "$dislikes.dislikeOwners" },
+            else: [],
+          },
+        },
       },
     },
     // fetch owner details
@@ -444,48 +421,15 @@ const getVideoById = asyncHandler(async (req, res) => {
         createdAt: 1,
         updatedAt: 1,
         totalLikes: {
-          $size: {
-            $filter: {
-              input: "$likes",
-              as: "like",
-              cond: { $eq: ["$$like.liked", true] },
-            },
-          },
+          $size: "$likes",
         },
         totalDisLikes: {
-          $size: {
-            $filter: {
-              input: "$likes",
-              as: "like",
-              cond: { $eq: ["$$like.liked", false] },
-            },
-          },
+          $size: "$dislikes",
         },
-        // BUG: Not working both
         isLiked: {
           $cond: {
             if: {
-              $gt: [
-                {
-                  $size: {
-                    $filter: {
-                      input: "$likes",
-                      as: "like",
-                      cond: {
-                        $and: [
-                          {
-                            $eq: ["$$like.likedBy", req.user?._id],
-                          },
-                          {
-                            $eq: ["$$like.liked", true],
-                          },
-                        ],
-                      },
-                    },
-                  },
-                },
-                0,
-              ],
+              $in: [req.user?._id, "$likes"],
             },
             then: true,
             else: false,
@@ -494,23 +438,7 @@ const getVideoById = asyncHandler(async (req, res) => {
         isDisLiked: {
           $cond: {
             if: {
-              $gt: [
-                {
-                  $size: {
-                    $filter: {
-                      input: "$likes",
-                      as: "like",
-                      cond: {
-                        $and: [
-                          { $eq: ["$$like.likedBy", req.user?._id] },
-                          { $eq: ["$$like.liked", false] },
-                        ],
-                      },
-                    },
-                  },
-                },
-                0,
-              ],
+              $in: [req.user?._id, "$dislikes"],
             },
             then: true,
             else: false,
@@ -542,7 +470,7 @@ const updateVideo = asyncHandler(async (req, res) => {
   const video = await Video.findById(videoId);
   if (!video) throw new APIError(404, "video not found");
 
-  if (video.owner.toString() !== req.user._id.toString())
+  if (video.owner.toString() !== req.user?._id.toString())
     throw new APIError(401, "Only owner can modify video details");
 
   //Update based on data sent
@@ -574,42 +502,39 @@ const deleteVideo = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
   if (!isValidObjectId(videoId)) throw new APIError(400, "VideoId not found");
 
-  // return res
-  //   .status(200)
-  //   .json(
-  //     new APIResponse(
-  //       200,
-  //       { isDeleted: true },
-  //       `Successfully deleted ${videoId}`
-  //     )
-  //   );
-
   const findRes = await Video.findByIdAndDelete(videoId);
 
   if (!findRes) throw new APIError(400, "Video not found");
 
   await deleteVideoOnCloudinary(findRes.videoFile);
 
-  const deleteLikes = await Like.deleteMany({
+  const deleteVideoLikes = await Like.deleteMany({
     video: new mongoose.Types.ObjectId(videoId),
   });
 
-  // TODO:Implement deleting Comment likes logic
-
-  const deleteComments = await Comment.deleteMany({
+  const videoComments = await Comment.find({
     video: new mongoose.Types.ObjectId(videoId),
   });
 
-  const deleteFromPlayList = await Playlist.updateMany(
-    {},
-    { $pull: { video: new mongoose.Types.ObjectId(videoId) } }
+  const commentIds = videoComments.map((comment) => comment._id);
+
+  const deleteCommentLikes = await Like.deleteMany({
+    comment: { $in: commentIds },
+  });
+
+  const deleteVideoComments = await Comment.deleteMany({
+    video: new mongoose.Types.ObjectId(videoId),
+  });
+
+  const deleteVideoFromPlayList = await Playlist.updateMany(
+    {
+    },
+    { $pull: { videos: new mongoose.Types.ObjectId(videoId) } }
   );
 
   return res
     .status(200)
-    .json(
-      new APIResponse(200, { isDeleted: true }, "Video deleted successfully")
-    );
+    .json(new APIResponse(200, [], "Video deleted successfully"));
 });
 
 const togglePublishStatus = asyncHandler(async (req, res) => {
@@ -646,16 +571,20 @@ const updateView = asyncHandler(async (req, res) => {
   const updatedVideo = await video.save();
   if (!updatedVideo) throw new APIError(400, "Error occurred on updating view");
 
-  const watchHistory = await User.findByIdAndUpdate(
-    req.user._id,
-    {
-      $addToSet: { watchHistory: new mongoose.Types.ObjectId(videoId) },
-      // $push: { watchHistory: new mongoose.Types.ObjectId(videoId) },
-    },
-    {
-      new: true,
-    }
-  );
+  let watchHistory;
+  if (req.user) {
+    watchHistory = await User.findByIdAndUpdate(
+      req.user?._id,
+      {
+        $push: {
+          watchHistory: new mongoose.Types.ObjectId(videoId),
+        },
+      },
+      {
+        new: true,
+      }
+    );
+  }
 
   return res
     .status(200)

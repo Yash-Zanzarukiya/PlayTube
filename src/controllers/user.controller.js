@@ -25,7 +25,7 @@ const generateAccessAndRefreshToken = async (_id) => {
   } catch (error) {
     throw new APIError(
       500,
-      "Something went wrong while generating referesh and access token"
+      "Something went wrong while generating refresh and access token"
     );
   }
 };
@@ -174,7 +174,7 @@ const loginUser = asyncHandler(async (req, res) => {
 
 const logoutUser = asyncHandler(async (req, res) => {
   await User.findByIdAndUpdate(
-    req.user._id,
+    req.user?._id,
     {
       $unset: {
         refreshToken: 1,
@@ -255,8 +255,6 @@ const changePassword = asyncHandler(async (req, res) => {
     throw new APIError(400, "All Fields Required");
   }
 
-  console.log(oldPassword, newPassword);
-
   const user = await User.findById(req.user?._id);
   const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
 
@@ -279,9 +277,9 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 });
 
 const updateUserProfile = asyncHandler(async (req, res) => {
-  const { fullName, email, username } = req.body;
+  const { fullName, email, username, description } = req.body;
 
-  if (!fullName && !email && !username) {
+  if (!fullName && !email && !username && !description) {
     throw new APIError(400, "At least one field required");
   }
 
@@ -290,6 +288,8 @@ const updateUserProfile = asyncHandler(async (req, res) => {
   if (fullName) user.fullName = fullName;
 
   if (email) user.email = email;
+
+  if (description) user.description = description;
 
   if (username) {
     const isExists = await User.find({ username });
@@ -450,10 +450,99 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new APIResponse(200, channelUser[0], "Channal Fetched Successfully"));
+    .json(new APIResponse(200, channelUser[0], "Channel Fetched Successfully"));
 });
 
-// FIXME Get Proper WatchHistory
+// TODO Get Proper WatchHistory
+const getNewWatchHistory = asyncHandler(async (req, res) => {
+  const userWatchHistory = await User.aggregate([
+    {
+      $match: {
+        _id: new mongoose.Types.ObjectId(req.user?._id),
+      },
+    },
+    {
+      $project: { watchHistory: 1 },
+    },
+    {
+      $unwind: {
+        path: "$watchHistory",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $sort: {
+        "watchHistory.createdAt": -1,
+      },
+    },
+    {
+      $addFields: {
+        "watchHistory.watchedDate": {
+          $dateToString: {
+            format: "%Y-%m-%d",
+            date: "$watchHistory.createdAt",
+          },
+        },
+      },
+    },
+    {
+      $lookup: {
+        from: "videos",
+        localField: "watchHistory.video",
+        foreignField: "_id",
+        as: "watchHistory.video",
+        pipeline: [
+          {
+            $lookup: {
+              from: "users",
+              localField: "owner",
+              foreignField: "_id",
+              as: "owner",
+              pipeline: [
+                {
+                  $project: {
+                    username: 1,
+                    fullName: 1,
+                    avatar: 1,
+                  },
+                },
+              ],
+            },
+          },
+          {
+            $addFields: {
+              owner: {
+                $first: "$owner",
+              },
+            },
+          },
+        ],
+      },
+    },
+    {
+      $addFields: {
+        "watchHistory.video": {
+          $first: "$watchHistory.video",
+        },
+      },
+    },
+    {
+      $group: {
+        _id: "$watchHistory.watchedDate",
+        videos: {
+          $push: "$watchHistory",
+        },
+      },
+    },
+  ]);
+
+  let watchHistory = userWatchHistory;
+
+  return res
+    .status(200)
+    .json(new APIResponse(200, watchHistory, "History Fetched Successfully"));
+});
+
 const getWatchHistory = asyncHandler(async (req, res) => {
   const userWatchHistory = await User.aggregate([
     {
@@ -515,6 +604,24 @@ const getWatchHistory = asyncHandler(async (req, res) => {
     );
 });
 
+const clearWatchHistory = asyncHandler(async (req, res) => {
+  const isCleared = await User.findByIdAndUpdate(
+    new mongoose.Types.ObjectId(req.user?._id),
+    {
+      $set: {
+        watchHistory: [],
+      },
+    },
+    {
+      new: true,
+    }
+  );
+  if (!isCleared) throw new APIError(500, "Failed to clear history");
+  return res
+    .status(200)
+    .json(new APIResponse(200, [], "History Cleared Successfully"));
+});
+
 export {
   registerUser,
   loginUser,
@@ -527,4 +634,5 @@ export {
   updateUserCoverImage,
   getUserChannelProfile,
   getWatchHistory,
+  clearWatchHistory,
 };

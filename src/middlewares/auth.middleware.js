@@ -17,14 +17,15 @@ const verifyJWT = asyncHandler(async (req, _, next) => {
       accessToken,
       process.env.ACCESS_TOKEN_SECRET
     );
+
     if (!decodedToken) {
       throw new APIError(401, "Invalid Access Token");
     }
 
     const user = await User.findById(decodedToken._id).select(
-      "-password -refreshToken"
+      "-password -refreshToken -watchHistory"
     );
-    
+
     if (!user) {
       throw new APIError(401, "Invalid Access Token");
     }
