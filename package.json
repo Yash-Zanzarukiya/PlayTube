@@ -5,10 +5,9 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "dev": "nodemon -r dotenv/config --experimental-json-modules src/index.js",
-    "start": "node src/index.js"
+    "dev": "nodemon -r dotenv/config --experimental-json-modules server.js",
+    "start": "node server.js"
   },
-
   "author": "yashpz",
   "license": "ISC",
   "dependencies": {
@@ -22,10 +21,10 @@
     "mongoose": "^8.2.3",
     "mongoose-aggregate-paginate-v2": "^1.0.7",
     "multer": "^1.4.5-lts.1",
+    "nodemon": "^3.1.0",
     "morgan": "^1.10.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.0",
     "prettier": "^3.2.5"
   }
 }
