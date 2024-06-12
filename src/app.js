@@ -1,29 +1,16 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import morgan from "morgan";
 
 const app = express();
-
-// const allowOriginHeaderMiddleware = (req, res, next) => {
-//   res.header(
-//     "Access-Control-Allow-Origin",
-//     "https://play-tube-frontend-by-yashpz.vercel.app"
-//   );
-//   res.header(
-//     "Access-Control-Allow-Headers",
-//     "Origin, X-Requested-With, Content-Type, Accept"
-//   );
-//   next();
-// };
-
-// app.use(allowOriginHeaderMiddleware);
 
 app.use(
   cors({
     origin: [
+      "*",
       "https://play-tube-frontend-by-yashpz.vercel.app",
       "http://localhost:5173",
-      "*",
     ],
     credentials: true,
   })
@@ -33,6 +20,7 @@ app.use(express.json({ limit: "16kb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
 app.use(cookieParser());
+app.use(morgan("dev"));
 
 //import Routes
 import userRouter from "./routes/user.routes.js";
