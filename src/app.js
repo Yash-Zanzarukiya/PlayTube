@@ -4,6 +4,20 @@ import cookieParser from "cookie-parser";
 
 const app = express();
 
+const allowOriginHeaderMiddleware = (req, res, next) => {
+  res.header(
+    "Access-Control-Allow-Origin",
+    "https://play-tube-frontend-by-yashpz.vercel.app"
+  ); 
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept"
+  );
+  next();
+};
+
+app.use(allowOriginHeaderMiddleware);
+
 app.use(
   cors({
     origin: [
