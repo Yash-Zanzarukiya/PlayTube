@@ -161,16 +161,21 @@ const loginUser = asyncHandler(async (req, res) => {
     Partitioned: true,
   };
 
+  res.setHeader(
+    "Set-Cookie",
+    `${"cookieName"}=${"cookieValue"}; Max-Age=${60 * 60 * 24 * 1000}; Path=/; HttpOnly; SameSite=None; Secure; Partitioned`
+  );
+
+  // .cookie("accessToken", accessToken, {
+  //   ...cookieOptions,
+  //   maxAge: 1 * 24 * 60 * 60 * 1000,
+  // })
+  // .cookie("refreshToken", refreshToken, {
+  //   ...cookieOptions,
+  //   maxAge: 10 * 24 * 60 * 60 * 1000,
+  // })
   return res
     .status(200)
-    .cookie("accessToken", accessToken, {
-      ...cookieOptions,
-      maxAge: 1 * 24 * 60 * 60 * 1000,
-    })
-    .cookie("refreshToken", refreshToken, {
-      ...cookieOptions,
-      maxAge: 10 * 24 * 60 * 60 * 1000,
-    })
     .json(
       new APIResponse(
         200,
