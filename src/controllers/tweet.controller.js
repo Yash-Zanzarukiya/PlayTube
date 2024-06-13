@@ -2,7 +2,7 @@ import { Tweet } from "../models/tweet.model.js";
 import { Like } from "../models/like.model.js";
 import { Subscription } from "../models/subscription.model.js";
 import mongoose, { isValidObjectId } from "mongoose";
-import { APIError } from "../utils/APIError.js";
+import { apierrors as APIError } from "../errorUtils/apierrors.js";
 import { APIResponse } from "../utils/APIResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 

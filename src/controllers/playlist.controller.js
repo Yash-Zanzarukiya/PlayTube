@@ -1,7 +1,7 @@
 import mongoose, { isValidObjectId } from "mongoose";
 import { Playlist } from "../models/playlist.model.js";
-import { APIError } from "../utils/APIError.js";
 import { APIResponse } from "../utils/APIResponse.js";
+import { apierrors as APIError } from "../errorUtils/apierrors.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
 // TODO: Review and Enhance all controllers

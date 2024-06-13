@@ -1,5 +1,5 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { APIError } from "../utils/APIError.js";
+import { apierrors as APIError } from "../errorUtils/apierrors.js";
 import { User } from "../models/user.model.js";
 import {
   deleteImageOnCloudinary,

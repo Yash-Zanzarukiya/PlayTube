@@ -1,5 +1,5 @@
 import mongoose, { isValidObjectId } from "mongoose";
-import { APIError } from "../utils/APIError.js";
+import { apierrors as APIError } from "../errorUtils/apierrors.js";
 import { APIResponse } from "../utils/APIResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { User } from "../models/user.model.js";
@@ -83,7 +83,7 @@ export const getAboutChannel = asyncHandler(async (req, res) => {
         },
         links: 1,
         createdAt: 1,
-        description:1,
+        description: 1,
       },
     },
   ]);

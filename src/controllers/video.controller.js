@@ -1,8 +1,8 @@
 import mongoose, { isValidObjectId } from "mongoose";
 import { Video } from "../models/video.model.js";
 import { User } from "../models/user.model.js";
-import { APIError } from "../utils/APIError.js";
 import { APIResponse } from "../utils/APIResponse.js";
+import { apierrors as APIError } from "../errorUtils/apierrors.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import {
   deleteImageOnCloudinary,
