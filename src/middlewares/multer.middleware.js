@@ -4,6 +4,7 @@ const localTempPath = "public/temp";
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
+    console.log("LocalPath: ", localTempPath);
     cb(null, localTempPath);
   },
   filename: function (req, file, cb) {
