@@ -1,7 +1,7 @@
 import multer from "multer";
 import fs from "fs";
 
-const localTempPath = "public/temp";
+const localTempPath = "./public/temp";
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -10,6 +10,9 @@ const storage = multer.diskStorage({
     if (!fs.existsSync(localTempPath)) {
       console.error(`Directory ${localTempPath} does not exist.`);
       fs.mkdirSync(localTempPath, { recursive: true });
+    }
+    if (fs.existsSync(localTempPath)) {
+      console.error(`Directory ${localTempPath} exists.`);
     }
     cb(null, localTempPath);
   },
