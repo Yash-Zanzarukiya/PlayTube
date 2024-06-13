@@ -160,9 +160,9 @@ const loginUser = asyncHandler(async (req, res) => {
   //   sameSite: "None",
   //   Partitioned: true,
   // };
-  
-  console.log('Access Token:', accessToken);
-  console.log('Refresh Token:', refreshToken);
+
+  console.log("Access Token:", accessToken);
+  console.log("Refresh Token:", refreshToken);
 
   res.setHeader(
     "Set-Cookie",
@@ -204,16 +204,22 @@ const logoutUser = asyncHandler(async (req, res) => {
     sameSite: "None",
   };
 
+  res.setHeader(
+    "Set-Cookie",
+    `accessToken=${accessToken}; Max-Age=${0}; Path=/; HttpOnly; SameSite=None; Secure; Partitioned`
+  );
+
+  // .clearCookie("accessToken", {
+  //   ...cookieOptions,
+  //   maxAge: 1 * 24 * 60 * 60 * 1000,
+  // })
+  // .clearCookie("refreshToken", {
+  //   ...cookieOptions,
+  //   maxAge: 10 * 24 * 60 * 60 * 1000,
+  // })
+  
   return res
     .status(200)
-    .clearCookie("accessToken", {
-      ...cookieOptions,
-      maxAge: 1 * 24 * 60 * 60 * 1000,
-    })
-    // .clearCookie("refreshToken", {
-    //   ...cookieOptions,
-    //   maxAge: 10 * 24 * 60 * 60 * 1000,
-    // })
     .json(new APIResponse(200, {}, "Logged out Successfully"));
 });
 
