@@ -206,7 +206,7 @@ const logoutUser = asyncHandler(async (req, res) => {
 
   res.setHeader(
     "Set-Cookie",
-    `accessToken=${accessToken}; Max-Age=${0}; Path=/; HttpOnly; SameSite=None; Secure; Partitioned`
+    `accessToken=; Max-Age=-1; Path=/; HttpOnly; SameSite=None; Secure; Partitioned`
   );
 
   // .clearCookie("accessToken", {
@@ -217,7 +217,7 @@ const logoutUser = asyncHandler(async (req, res) => {
   //   ...cookieOptions,
   //   maxAge: 10 * 24 * 60 * 60 * 1000,
   // })
-  
+
   return res
     .status(200)
     .json(new APIResponse(200, {}, "Logged out Successfully"));
