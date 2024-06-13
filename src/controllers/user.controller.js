@@ -160,16 +160,19 @@ const loginUser = asyncHandler(async (req, res) => {
   //   sameSite: "None",
   //   Partitioned: true,
   // };
+  
+  console.log('Access Token:', accessToken);
+  console.log('Refresh Token:', refreshToken);
 
   res.setHeader(
     "Set-Cookie",
-    `__Host-accessToken=${accessToken}; Max-Age=${1 * 24 * 60 * 60 * 1000}; Path=/; HttpOnly; SameSite=None; Secure; Partitioned`
+    `accessToken=${accessToken}; Max-Age=${1 * 24 * 60 * 60 * 1000}; Path=/; HttpOnly; SameSite=None; Secure; Partitioned`
   );
 
-  res.setHeader(
-    "Set-Cookie",
-    `__Host-refreshToken=${refreshToken}; Max-Age=${10 * 24 * 60 * 60 * 1000}; Path=/; HttpOnly; SameSite=None; Secure; Partitioned`
-  );
+  // res.setHeader(
+  //   "Set-Cookie",
+  //   `__Host-refreshToken=${refreshToken}; Max-Age=${10 * 24 * 60 * 60 * 1000}; Path=/; HttpOnly; SameSite=None; Secure; Partitioned`
+  // );
 
   return res
     .status(200)
@@ -207,10 +210,10 @@ const logoutUser = asyncHandler(async (req, res) => {
       ...cookieOptions,
       maxAge: 1 * 24 * 60 * 60 * 1000,
     })
-    .clearCookie("refreshToken", {
-      ...cookieOptions,
-      maxAge: 10 * 24 * 60 * 60 * 1000,
-    })
+    // .clearCookie("refreshToken", {
+    //   ...cookieOptions,
+    //   maxAge: 10 * 24 * 60 * 60 * 1000,
+    // })
     .json(new APIResponse(200, {}, "Logged out Successfully"));
 });
 
@@ -251,13 +254,13 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
     res.setHeader(
       "Set-Cookie",
-      `__Host-accessToken=${accessToken}; Max-Age=${1 * 24 * 60 * 60 * 1000}; Path=/; HttpOnly; SameSite=None; Secure; Partitioned`
+      `accessToken=${accessToken}; Max-Age=${1 * 24 * 60 * 60 * 1000}; Path=/; HttpOnly; SameSite=None; Secure; Partitioned`
     );
 
-    res.setHeader(
-      "Set-Cookie",
-      `__Host-refreshToken=${refreshToken}; Max-Age=${10 * 24 * 60 * 60 * 1000}; Path=/; HttpOnly; SameSite=None; Secure; Partitioned`
-    );
+    // res.setHeader(
+    //   "Set-Cookie",
+    //   `refreshToken=${refreshToken}; Max-Age=${10 * 24 * 60 * 60 * 1000}; Path=/; HttpOnly; SameSite=None; Secure; Partitioned`
+    // );
 
     return res
       .status(200)
