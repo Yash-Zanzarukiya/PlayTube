@@ -158,6 +158,7 @@ const loginUser = asyncHandler(async (req, res) => {
     httpOnly: true,
     secure: true,
     sameSite: "None",
+    Partitioned
   };
 
   return res
@@ -196,6 +197,7 @@ const logoutUser = asyncHandler(async (req, res) => {
     httpOnly: true,
     secure: true,
     sameSite: "None",
+    Partitioned
   };
   return res
     .status(200)
@@ -242,6 +244,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       httpOnly: true,
       secure: true,
       sameSite: "None",
+      Partitioned
     };
 
     return res
