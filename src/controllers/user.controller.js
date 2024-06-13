@@ -154,20 +154,21 @@ const loginUser = asyncHandler(async (req, res) => {
   );
 
   // set tokens in cookie and send response
-  const cookieOptions = {
-    httpOnly: true,
-    secure: true,
-    sameSite: "None",
-    Partitioned: true,
-  };
+  // const cookieOptions = {
+  //   httpOnly: true,
+  //   secure: true,
+  //   sameSite: "None",
+  //   Partitioned: true,
+  // };
 
   res.setHeader(
     "Set-Cookie",
-    `${"accessToken"}=${accessToken}; Max-Age=${1 * 24 * 60 * 60 * 1000}; Path=/; HttpOnly; SameSite=None; Secure; Partitioned`
+    `accessToken=${accessToken}; Max-Age=${1 * 24 * 60 * 60 * 1000}; Path=/; HttpOnly; SameSite=None; Secure; Partitioned`
   );
+
   res.setHeader(
     "Set-Cookie",
-    `${"refreshToken"}=${refreshToken}; Max-Age=${10 * 24 * 60 * 60 * 1000}; Path=/; HttpOnly; SameSite=None; Secure; Partitioned`
+    `refreshToken=${refreshToken}; Max-Age=${10 * 24 * 60 * 60 * 1000}; Path=/; HttpOnly; SameSite=None; Secure; Partitioned`
   );
 
   return res
@@ -250,11 +251,12 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
     res.setHeader(
       "Set-Cookie",
-      `${"accessToken"}=${accessToken}; Max-Age=${1 * 24 * 60 * 60 * 1000}; Path=/; HttpOnly; SameSite=None; Secure; Partitioned`
+      `accessToken=${accessToken}; Max-Age=${1 * 24 * 60 * 60 * 1000}; Path=/; HttpOnly; SameSite=None; Secure; Partitioned`
     );
+
     res.setHeader(
       "Set-Cookie",
-      `${"refreshToken"}=${refreshToken}; Max-Age=${10 * 24 * 60 * 60 * 1000}; Path=/; HttpOnly; SameSite=None; Secure; Partitioned`
+      `refreshToken=${refreshToken}; Max-Age=${10 * 24 * 60 * 60 * 1000}; Path=/; HttpOnly; SameSite=None; Secure; Partitioned`
     );
 
     return res
