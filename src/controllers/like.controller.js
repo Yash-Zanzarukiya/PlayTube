@@ -1,4 +1,4 @@
-import { APIResponse } from "../utils/APIResponse.js";
+import { apiresponses as APIResponse } from "../errorUtils/apiresponses.js";
 import { apierrors as APIError } from "../errorUtils/apierrors.js";
 import mongoose, { isValidObjectId } from "mongoose";
 import { Like } from "../models/like.model.js";

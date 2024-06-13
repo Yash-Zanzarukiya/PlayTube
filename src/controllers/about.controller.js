@@ -1,6 +1,6 @@
 import mongoose, { isValidObjectId } from "mongoose";
 import { apierrors as APIError } from "../errorUtils/apierrors.js";
-import { APIResponse } from "../utils/APIResponse.js";
+import { apiresponses as APIResponse } from "../errorUtils/apiresponses.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { User } from "../models/user.model.js";
 import { urlencoded } from "express";

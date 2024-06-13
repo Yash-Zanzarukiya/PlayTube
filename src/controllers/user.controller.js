@@ -5,7 +5,7 @@ import {
   deleteImageOnCloudinary,
   uploadPhotoOnCloudinary as uploadOnCloudinary,
 } from "../utils/cloudinary.js";
-import { APIResponse } from "../utils/APIResponse.js";
+import { apiresponses as APIResponse } from "../errorUtils/apiresponses.js";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 

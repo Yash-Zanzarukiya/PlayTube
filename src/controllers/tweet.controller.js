@@ -3,7 +3,7 @@ import { Like } from "../models/like.model.js";
 import { Subscription } from "../models/subscription.model.js";
 import mongoose, { isValidObjectId } from "mongoose";
 import { apierrors as APIError } from "../errorUtils/apierrors.js";
-import { APIResponse } from "../utils/APIResponse.js";
+import { apiresponses as APIResponse } from "../errorUtils/apiresponses.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
 // TODO: Review and Enhance all controllers
