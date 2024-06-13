@@ -1,6 +1,6 @@
 import multer from "multer";
 
-const localTempPath = "public/temp";
+const localTempPath = "./public/temp";
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
