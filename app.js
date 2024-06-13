@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import morgan from "morgan";
+import fs from "fs";
 
 const app = express();
 
@@ -18,6 +19,16 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
 app.use(cookieParser());
 app.use(morgan("dev"));
+
+if (!fs.existsSync("./public/temp")) {
+  console.error(`Directory "./public/temp" does not exist in app.`);
+  fs.mkdirSync("./public/temp", { recursive: true });
+  if (!fs.existsSync("./public/temp")) {
+    console.error(`Directory ./public/temp still does not exist in app.`);
+  } else {
+    console.error(`Directory ./public/temp exist in app.`);
+  }
+}
 
 //import Routes
 import userRouter from "./src/routes/user.routes.js";
