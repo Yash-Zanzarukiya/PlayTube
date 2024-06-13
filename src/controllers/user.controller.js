@@ -157,13 +157,19 @@ const loginUser = asyncHandler(async (req, res) => {
   const cookieOptions = {
     httpOnly: true,
     secure: true,
-    sameSite: 'none',
+    sameSite: "none",
   };
 
   return res
     .status(200)
-    .cookie("accessToken", accessToken, cookieOptions)
-    .cookie("refreshToken", refreshToken, cookieOptions)
+    .cookie("accessToken", accessToken, {
+      ...cookieOptions,
+      maxAge: 1 * 24 * 60 * 60 * 1000,
+    })
+    .cookie("refreshToken", refreshToken, {
+      ...cookieOptions,
+      maxAge: 10 * 24 * 60 * 60 * 1000,
+    })
     .json(
       new APIResponse(
         200,
@@ -189,12 +195,18 @@ const logoutUser = asyncHandler(async (req, res) => {
   const cookieOptions = {
     httpOnly: true,
     secure: true,
-    sameSite: 'none',
+    sameSite: "none",
   };
   return res
     .status(200)
-    .clearCookie("accessToken", cookieOptions)
-    .clearCookie("refreshToken", cookieOptions)
+    .clearCookie("accessToken", {
+      ...cookieOptions,
+      maxAge: 1 * 24 * 60 * 60 * 1000,
+    })
+    .clearCookie("refreshToken", {
+      ...cookieOptions,
+      maxAge: 10 * 24 * 60 * 60 * 1000,
+    })
     .json(new APIResponse(200, {}, "Logged out Successfully"));
 });
 
@@ -229,13 +241,19 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     const cookieOptions = {
       httpOnly: true,
       secure: true,
-      sameSite: 'none',
+      sameSite: "none",
     };
 
     return res
       .status(200)
-      .cookie("accessToken", accessToken, cookieOptions)
-      .cookie("refreshToken", refreshToken, cookieOptions)
+      .cookie("accessToken", accessToken, {
+        ...cookieOptions,
+        maxAge: 1 * 24 * 60 * 60 * 1000,
+      })
+      .cookie("refreshToken", refreshToken, {
+        ...cookieOptions,
+        maxAge: 10 * 24 * 60 * 60 * 1000,
+      })
       .json(
         new APIResponse(
           200,
