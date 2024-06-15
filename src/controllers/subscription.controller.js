@@ -1,7 +1,7 @@
 import mongoose, { isValidObjectId } from "mongoose";
 import { Subscription } from "../models/subscription.model.js";
-import { apiresponses as APIResponse } from "../errorUtils/apiresponses.js";
-import { apierrors as APIError } from "../errorUtils/apierrors.js";
+import { APIResponse } from "../utils/APIResponse.js";
+import { APIError } from "../utils/APIError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
 // TODO: Review and Enhance all controllers

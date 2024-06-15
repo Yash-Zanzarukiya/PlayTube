@@ -1,11 +1,11 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { apierrors as APIError } from "../errorUtils/apierrors.js";
+import { APIError } from "../utils/APIError.js";
 import { User } from "../models/user.model.js";
 import {
   deleteImageOnCloudinary,
   uploadPhotoOnCloudinary as uploadOnCloudinary,
 } from "../utils/cloudinary.js";
-import { apiresponses as APIResponse } from "../errorUtils/apiresponses.js";
+import { APIResponse } from "../utils/APIResponse.js";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 

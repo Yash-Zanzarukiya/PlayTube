@@ -1,4 +1,4 @@
-import { apiresponses as APIResponse } from "../errorUtils/apiresponses.js";
+import { APIResponse } from "../utils/APIResponse.js";
 import { Video } from "../models/video.model.js";
 import { Like } from "../models/like.model.js";
 import { Subscription } from "../models/subscription.model.js";
