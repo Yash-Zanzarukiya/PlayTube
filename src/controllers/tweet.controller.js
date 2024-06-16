@@ -509,9 +509,7 @@ const deleteTweet = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(
-      new APIResponse(200, { isDeleted: true }, "tweet deleted successfully")
-    );
+    .json(new APIResponse(200, findRes, "tweet deleted successfully"));
 });
 
 export {
