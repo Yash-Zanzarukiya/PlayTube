@@ -56,11 +56,13 @@ const registerUser = asyncHandler(async (req, res) => {
   });
 
   if (userExist) {
-    throw new APIError(400, "User Already Exists...");
+    // throw new APIError(400, "User Already Exists...");
+    return res
+      .status(400)
+      .json(new APIResponse(400, [], "User Already Exists..."));
   }
 
   // Handling File
-  console.log(req.files);
 
   let avatarLocalPath = "";
   if (req.files && req.files.avatar && req.files?.avatar.length > 0) {
@@ -136,12 +138,16 @@ const loginUser = asyncHandler(async (req, res) => {
   });
 
   if (!user) {
-    throw new APIError(404, "User not Found");
+    // throw new APIError(404, "User not Found");
+    return res.status(404).json(new APIResponse(404, [], "User not Found"));
   }
 
   const isCredentialValid = await user.isPasswordCorrect(password);
   if (!isCredentialValid) {
-    throw new APIError(401, "Credential Invalid");
+    // throw new APIError(401, "Credential Invalid");
+    return res
+      .status(401)
+      .json(new APIResponse(401, [], "Invalid Credentials"));
   }
 
   // generate and store tokens
@@ -160,9 +166,6 @@ const loginUser = asyncHandler(async (req, res) => {
   //   sameSite: "None",
   //   Partitioned: true,
   // };
-
-  console.log("Access Token:", accessToken);
-  console.log("Refresh Token:", refreshToken);
 
   res.setHeader(
     "Set-Cookie",
